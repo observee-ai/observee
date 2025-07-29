@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-logger"
+version = "0.1.19"
+authors = [
+    { name = "Observee Team" },
+]
+description = "Python SDK for tool usage logging and monitoring"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.8"
+dependencies = [
+    "httpx",
+    "pydantic",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/observee-ai/python-sdk"
+"Bug Tracker" = "https://github.com/observee-ai/python-sdk/issues" 

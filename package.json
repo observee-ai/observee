@@ -1,0 +1,55 @@
+{
+  "name": "@observee/sdk",
+  "version": "1.1.0",
+  "description": "Complete Observee SDK - Unified package for agents, authentication, and logging",
+  "type": "module",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build": "echo 'Meta-package - no build needed'",
+    "test": "echo 'Meta-package - no tests'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/observee-ai/observee.git"
+  },
+  "keywords": [
+    "observee",
+    "mcp",
+    "agent",
+    "ai",
+    "llm",
+    "auth",
+    "oauth",
+    "logger",
+    "monitoring",
+    "anthropic",
+    "openai",
+    "gemini",
+    "typescript"
+  ],
+  "author": "Observee",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/observee-ai/observee/issues"
+  },
+  "homepage": "https://github.com/observee-ai/observee#readme",
+  "dependencies": {
+    "@observee/agents": "^1.0.1",
+    "@observee/auth": "^1.0.0", 
+    "@observee/logger": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 

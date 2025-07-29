@@ -1,0 +1,72 @@
+---
+title: "OpenAI SDK"
+description: "Connect Observee with OpenAI SDK"
+---
+
+## Overview
+
+The OpenAI SDK allows you to connect your Agent directly to an Observee MCP (Model Context Protocol) server. This enables your Agent to access Observee's powerful tool ecosystem, integrate with internal or external APIs, and leverage custom knowledge sources—all through a unified, secure interface.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Node.js 18 or later installed
+- The OpenAI SDK installed: `npm install @openai/agents`
+- Your Observee client ID (found in your Observee dashboard)
+- Your Observee API key for authentication
+
+## What is MCPServerStreamableHttp?
+
+`MCPServerStreamableHttp` is a class provided by the OpenAI SDK for connecting to any HTTP MCP server. It manages the connection, streaming, and communication between your Agent and the server, supporting real-time, tool-augmented LLM responses. Once connected, your Agent automatically discovers and can use all available tools from the MCP server.
+
+## Example: Connecting an Agent to Observee's MCP Server
+
+Below is a complete example of how to set up an Agent that communicates with your Observee MCP server:
+
+```ts
+import { Agent, run, MCPServerStreamableHttp } from '@openai/agents';
+
+async function main() {
+  // Instantiate the MCP server connection to Observee
+  // Replace {your_client_id} with your actual client ID from the Observee dashboard
+  const mcpServer = new MCPServerStreamableHttp({
+    url: 'https://mcp.observee.ai/mcp?client_id={your_client_id}',
+    name: 'Observee MCP Server',
+    requestInit: {
+      headers: {
+        'Authorization': 'Bearer {observee_api_key}' // Replace with your API key
+      }
+    }
+  });
+
+  // Create the Agent and register the MCP server
+  // The Agent will automatically discover and use all available tools from Observee
+  const agent = new Agent({
+    name: 'Observee Agent',
+    instructions: 'Use all available tools and knowledge to help users with their requests.',
+    mcpServers: [mcpServer],
+  });
+
+  try {
+    await mcpServer.connect();
+    
+    // Example query - the Agent will use appropriate Observee tools to answer
+    const result = await run(agent, 'Help me analyze the latest data from our monitoring system');
+    console.log(result.finalOutput);
+  } catch (error) {
+    console.error('Connection failed:', error);
+    // Check your client ID, API key, and network connection
+  } finally {
+    await mcpServer.close();
+  }
+}
+
+main().catch(console.error);
+```
+
+## Learn More
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/agentsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)
+

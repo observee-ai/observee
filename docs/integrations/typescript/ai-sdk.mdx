@@ -1,0 +1,92 @@
+---
+title: "Vercel AI SDK"
+description: "Connect Observee with Vercel's AI SDK"
+---
+
+## Overview
+
+The Vercel AI SDK can be seamlessly integrated with Observee to enable your applications to access Observee's powerful tool ecosystem and custom MCP (Model Context Protocol) servers. This allows you to combine advanced LLMs, streaming, and tool use in a unified developer experience.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Node.js 18 or later installed
+- Required packages installed:
+ ```bash
+ npm install ai @modelcontextprotocol/sdk
+ npm install openai  # or your preferred provider
+ ```
+- Your Observee client ID (from Observee Dashboard)
+- Your Observee API key for authentication
+- OpenAI or any LLM API key
+
+## Example: Connecting to an MCP Server with the AI SDK
+
+Below is a complete example of how to connect to an MCP server using the Vercel AI SDK:
+
+```ts
+import {
+  experimental_createMCPClient as createMCPClient,
+  streamText,
+} from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
+
+async function main() {
+  try {
+    // Define your MCP server endpoint
+    // Replace {your_client_id} with your actual client ID from the Observee dashboard
+    const url = new URL('https://mcp.observee.ai/mcp?client_id={your_client_id}');
+
+    // Create the MCP client with authentication
+    const mcpClient = await createMCPClient({
+      transport: new StreamableHTTPClientTransport(url, {
+        requestInit: {
+          headers: {
+            'Authorization': 'Bearer {observee_api_key}' // Replace with your API key
+          }
+        }
+      })
+    });
+
+    // Discover available tools from the MCP server
+    const tools = await mcpClient.tools();
+    console.log(`Connected to MCP server with ${Object.keys(tools).length} tools available`);
+
+    // Use the tools in a streaming LLM call
+    const result = await streamText({
+      model: openai('gpt-4-turbo'),
+      tools, // Pass the discovered tools to streamText
+      prompt: 'Help me analyze the latest system metrics and provide insights',
+      maxTokens: 1000,
+    });
+
+    // Handle the streaming response
+    for await (const textPart of result.textStream) {
+      process.stdout.write(textPart);
+    }
+
+    // Always close the client when done
+    await mcpClient.close();
+    
+  } catch (error) {
+    console.error('MCP Integration failed:', error);
+    
+    // Common error scenarios:
+    if (error.message.includes('404')) {
+      console.log('Check your client ID and ensure the MCP server is deployed');
+    } else if (error.message.includes('authentication')) {
+      console.log('Verify your API key and authentication configuration');
+    }
+  }
+}
+
+main().catch(console.error);
+```
+
+## Learn More
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/agentsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)
+

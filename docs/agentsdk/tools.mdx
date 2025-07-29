@@ -1,0 +1,342 @@
+---
+title: "Tool Management"
+description: "Discover, filter, and execute tools directly."
+---
+
+## List Available Tools
+
+```python
+from observee_agents import list_tools
+
+tools = list_tools(observee_api_key="obs_your_key_here")
+print(f"Found {len(tools)} tools")
+
+for tool in tools[:5]:  # Show first 5
+    print(f"- {tool['name']}: {tool['description']}")
+```
+
+## Filter Tools
+
+Find relevant tools for specific tasks:
+
+```python
+from observee_agents import filter_tools
+
+# Find email tools
+email_tools = filter_tools(
+    query="email management",
+    max_tools=5,
+    observee_api_key="obs_your_key_here"
+)
+
+for tool in email_tools:
+    print(f"- {tool['name']} (score: {tool['relevance_score']})")
+```
+
+## Get Tool Information
+
+```python
+from observee_agents import get_tool_info
+
+tool_info = get_tool_info(
+    tool_name="youtube_get_transcript",
+    observee_api_key="obs_your_key_here"
+)
+
+if tool_info:
+    print(f"Tool: {tool_info['name']}")
+    print(f"Description: {tool_info['description']}")
+    print(f"Parameters: {tool_info['parameters']}")
+```
+
+## Execute Tools Directly
+
+Run tools without LLM conversation:
+
+```python
+from observee_agents import execute_tool
+
+result = execute_tool(
+    tool_name="youtube_get_transcript",
+    tool_input={"video_url": "https://youtube.com/watch?v=example"},
+    observee_api_key="obs_your_key_here"
+)
+
+print(result)
+```
+
+## Filter Types
+
+### BM25 Filter (Default)
+
+- **Speed**: ⚡ 1-5ms
+- **Best for**: Keyword matching, production use
+- **Dependencies**: None
+
+```python
+tools = filter_tools(
+    query="gmail email",
+    filter_type="bm25"
+)
+```
+
+### Local Embedding Filter
+
+- **Speed**: ⚡ 10ms
+- **Best for**: Semantic search, offline use
+- **Dependencies**: `pip install mcp-agents[embedding]`
+
+```python
+tools = filter_tools(
+    query="help me be productive",
+    filter_type="local_embedding"
+)
+```
+
+### Cloud Filter
+
+- **Speed**: 🐌 300-400ms
+- **Best for**: Highest accuracy
+- **Dependencies**: `pip install mcp-agents[cloud]`
+- **Requirements**: `PINECONE_API_KEY`, `OPENAI_API_KEY`
+
+```python
+tools = filter_tools(
+    query="complex analytical task",
+    filter_type="cloud"
+)
+```
+
+## Available Tools
+
+The SDK provides access to tools including:
+
+- **📧 Gmail**: Email management, search, compose
+- **🎥 YouTube**: Video transcript retrieval
+- **📋 Linear**: Project management, issues
+- **💬 Slack**: Messaging, channels, files
+- **📝 Notion**: Database queries, page creation
+- **🔍 Brave Search**: Web search
+- **📅 Google Calendar**: Event management
+- **📄 Google Docs**: Document creation and editing
+- **💾 Google Drive**: File management
+- **📊 Google Sheets**: Spreadsheet operations
+- **And many more...**
+
+## Examples
+
+### Find Tools for Email
+
+```python
+email_tools = filter_tools(
+    query="email management gmail",
+    max_tools=3
+)
+
+for tool in email_tools:
+    print(f"📧 {tool['name']}: {tool['description']}")
+```
+
+### Find Tools for Content Creation
+
+```python
+content_tools = filter_tools(
+    query="youtube video transcript content",
+    max_tools=5
+)
+
+for tool in content_tools:
+    print(f"🎥 {tool['name']}: {tool['description']}")
+```
+
+### Execute Multiple Tools
+
+```python
+# Get YouTube transcript
+transcript = execute_tool(
+    tool_name="youtube_get_transcript",
+    tool_input={"video_url": "https://youtube.com/watch?v=example"}
+)
+
+# Create Linear issue
+issue = execute_tool(
+    tool_name="linear_create_issue",
+    tool_input={
+        "title": "Video Summary",
+        "description": transcript["result"]
+    }
+)
+```
+
+## Custom Tools
+
+Custom tools allow you to add your own functionality to the SDK without needing to create a full MCP server. They work seamlessly with all LLM providers and can be combined with existing MCP tools.
+
+### Basic Usage
+
+```python
+from observee_agents import chat_with_tools_stream
+import asyncio
+
+# Define custom tool handler
+async def custom_tool_handler(tool_name: str, tool_input: dict) -> str:
+    """Handle custom tool executions"""
+    if tool_name == "add_numbers":
+        return str(tool_input.get("a", 0) + tool_input.get("b", 0))
+    elif tool_name == "get_time":
+        from datetime import datetime
+        return datetime.now().strftime("%I:%M %p")
+    else:
+        return f"Unknown tool: {tool_name}"
+
+# Define custom tools in OpenAI format
+custom_tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "add_numbers",
+            "description": "Add two numbers together",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "a": {"type": "number", "description": "First number"},
+                    "b": {"type": "number", "description": "Second number"}
+                },
+                "required": ["a", "b"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_time",
+            "description": "Get the current time",
+            "parameters": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+    }
+]
+
+# Use custom tools
+async def example():
+    async for chunk in chat_with_tools_stream(
+        message="What's 5 + 3? Also, what time is it?",
+        provider="anthropic",
+        custom_tools=custom_tools,
+        custom_tool_handler=custom_tool_handler,
+        observee_api_key="obs_your_key_here"
+    ):
+        if chunk["type"] == "content":
+            print(chunk["content"], end="", flush=True)
+        elif chunk["type"] == "tool_result":
+            print(f"\n🔧 [Tool: {chunk['tool_name']} = {chunk['result']}]")
+
+asyncio.run(example())
+```
+
+### Tool Handler Function
+
+The custom tool handler is an async function that receives:
+
+- `tool_name`: The name of the tool being called
+- `tool_input`: Dictionary of input parameters
+
+It should return a string with the result.
+
+```python
+async def custom_tool_handler(tool_name: str, tool_input: dict) -> str:
+    if tool_name == "calculate_tax":
+        income = tool_input.get("income", 0)
+        rate = tool_input.get("rate", 0.2)
+        return str(income * rate)
+    elif tool_name == "fetch_weather":
+        # Implement weather fetching logic
+        city = tool_input.get("city", "Unknown")
+        return f"Weather in {city}: Sunny, 72°F"
+    else:
+        return f"Unknown tool: {tool_name}"
+```
+
+### Tool Definition Format
+
+Custom tools use the OpenAI function calling format:
+
+```python
+{
+    "type": "function",
+    "function": {
+        "name": "tool_name",
+        "description": "What this tool does",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "param1": {
+                    "type": "string",
+                    "description": "Description of param1"
+                },
+                "param2": {
+                    "type": "number",
+                    "description": "Description of param2"
+                }
+            },
+            "required": ["param1"]  # List of required parameters
+        }
+    }
+}
+```
+
+### Combining Custom and MCP Tools
+
+```python
+# Custom tools work alongside MCP tools
+async def combined_example():
+    async for chunk in chat_with_tools_stream(
+        message="Search for AI news and tell me what time it is",
+        provider="openai",
+        custom_tools=custom_tools,  # Your custom tools
+        custom_tool_handler=custom_tool_handler,
+        enable_filtering=True,  # MCP tools still available
+        observee_api_key="obs_your_key_here"
+    ):
+        # Process response...
+```
+
+### Non-Streaming Usage
+
+Custom tools also work with the synchronous API:
+
+```python
+from observee_agents import chat_with_tools
+
+result = chat_with_tools(
+    message="Calculate 15 + 27",
+    provider="anthropic",
+    custom_tools=custom_tools,
+    custom_tool_handler=custom_tool_handler,
+    observee_api_key="obs_your_key_here"
+)
+
+print(result["content"])
+```
+
+### Common Use Cases
+
+- **Business Logic**: Implement company-specific calculations or rules
+- **API Wrappers**: Create simple wrappers for internal APIs
+- **Data Processing**: Add custom data transformation tools
+- **Prototyping**: Quickly test tool ideas before creating MCP servers
+
+### Limitations
+
+- Custom tools are local to your application
+- They don't appear in `list_tools()` results
+- No built-in authentication or permissions
+- Limited to the OpenAI function format or when filtering=True
+
+## Next Steps
+
+- [Chat Interface](/agentsdk/chat)
+- [Examples](/agentsdk/examples)
+- [Configuration](/agentsdk/configuration)

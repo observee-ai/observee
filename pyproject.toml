@@ -1,0 +1,136 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "observee"
+version = "0.1.20"
+description = "Observee SDK - Tool usage logging, monitoring, authentication, and agent system for LLM integrations"
+readme = "README.MD"
+license = {text = "MIT"}
+authors = [
+    {name = "Observee Team", email = "contact@observee.ai"}
+]
+maintainers = [
+    {name = "Observee Team", email = "contact@observee.ai"}
+]
+keywords = ["mcp", "agent", "llm", "anthropic", "openai", "gemini", "tools", "logging", "monitoring", "oauth", "authentication"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Logging",
+    "Topic :: Internet :: WWW/HTTP",
+]
+requires-python = ">=3.8"
+dependencies = [
+    # mcp-logger dependencies
+    "httpx",
+    "pydantic",
+    # agents-oauth dependencies
+    "requests>=2.25.0",
+    "python-dotenv>=0.19.0",
+    # observee_agents dependencies
+    "fastmcp",
+    "anthropic",
+    "google-genai",
+    "openai",
+    "rich",
+    "bm25s",
+    "langchain",
+    "langchain-core",
+    "langchain-openai",
+    "langchain-anthropic",
+    "langchain-google-genai",
+    "jsonschema-pydantic",
+    "groq",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.18.0",
+    "pytest-cov>=3.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "mypy>=0.950",
+    "types-requests",
+    "build",
+    "twine",
+]
+embedding = [
+    "fastembed>=0.1.0",
+    "sentence-transformers",
+]
+cloud = [
+    "pinecone-client>=2.0.0",
+    "pinecone",
+]
+
+[project.urls]
+Homepage = "https://observee.ai"
+Documentation = "https://docs.observee.ai"
+Repository = "https://github.com/observee-ai/observee"
+"Bug Reports" = "https://github.com/observee-ai/observee/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "logger.python.mcp-logger*",
+    "auth.python.agents-oauth*",
+    "agents.python.observee_agents*",
+]
+
+[tool.setuptools.package-dir]
+"mcp_logger" = "logger/python/mcp-logger"
+"auth_mcp" = "auth/python/agents-oauth"
+"observee_agents" = "agents/python/observee_agents"
+
+[tool.setuptools.package-data]
+observee = ["*.md", "*.MD"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | node_modules
+)/
+'''
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q -v --cov=observee --cov-report=html --cov-report=term"
+testpaths = [
+    "tests",
+    "logger/python/tests",
+    "auth/python/tests",
+    "agents/python/tests",
+]
+asyncio_mode = "auto"
+python_files = ["test_*.py", "*_test.py"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

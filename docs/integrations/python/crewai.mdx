@@ -1,0 +1,88 @@
+---
+title: "CrewAI"
+description: "Build AI agent crews with Observee tools using CrewAI"
+---
+
+## Overview
+
+CrewAI enables you to orchestrate multiple AI agents working together, and with the MCP Server Adapter, you can connect your crews to Observee's powerful tool ecosystem. This integration allows you to build sophisticated multi-agent systems that leverage Observee's tools for complex workflows.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Python 3.10 or later installed
+- Required packages installed:
+  ```bash
+  pip install crewai crewai-tools python-dotenv
+  ```
+- Your Observee client ID for identifying your customer
+- Your Observee API key for authentication
+- OpenAI API key (set as environment variable)
+
+## Example
+
+Connect your CrewAI agents to Observee's MCP server to access all available tools:
+
+```python
+import os
+from dotenv import load_dotenv
+from crewai import Agent, Task, Crew
+from crewai_tools import MCPServerAdapter
+
+# Load environment variables
+load_dotenv()
+
+# Streamable HTTP Server configuration for Observee
+# Replace {your_client_id} with your actual client ID from the Observee dashboard
+server_params = {
+    "url": "https://mcp.observee.ai/mcp?client_id={your_client_id}",
+    "transport": "streamable-http",
+    "headers": {
+        "Authorization": "Bearer {observee_api_key}"  # Replace with your API key
+    }
+}
+
+# Example usage
+with MCPServerAdapter(server_params) as mcp_tools:
+    print(f"Available tools: {[tool.name for tool in mcp_tools]}")
+
+    my_agent = Agent(
+        role="MCP Tool User",
+        goal="Utilize tools from an MCP server.",
+        backstory="I can connect to MCP servers and use their tools.",
+        tools=mcp_tools,  # Pass the loaded tools to your agent
+        reasoning=True,
+        verbose=True
+    )
+    
+    # Create a task to check email
+    email_task = Task(
+        description="Check my latest email",
+        expected_output="Details about the latest email including sender, subject, and a brief summary of the content",
+        agent=my_agent
+    )
+    
+    # Create the crew
+    crew = Crew(
+        agents=[my_agent],
+        tasks=[email_task],
+        verbose=True
+    )
+    
+    # Execute the crew
+    result = crew.kickoff()
+    
+    print("\n--- Result ---")
+    print(result)
+```
+
+
+```
+
+## Learn More
+
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/authsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [Other Python Integrations](/integrations/python/overview)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)

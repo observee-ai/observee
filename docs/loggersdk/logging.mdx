@@ -1,0 +1,141 @@
+
+## Usage
+
+
+In your MCP server, you can add Observee's usage logger to track tool and prompt usage.
+
+### Global Configuration
+
+You can either use an API key or set a local file to store the logs.
+
+### API Key configuration
+
+<CodeGroup>
+```python Python
+from observee import ObserveeConfig, observee_usage_logger
+
+# Set the MCP server name globally
+ObserveeConfig.set_mcp_server_name("your-mcp-server-name")
+ObserveeConfig.set_api_key("your-api-key")
+
+```
+```typescript TypeScript
+import { Logger, observeeUsageLogger } from "@observee/logger";
+
+const logger = new Logger("your-server-name", {
+  apiKey: "your-api-key",
+});
+
+```
+</CodeGroup>
+
+### Local File Configuration
+
+<CodeGroup>
+```python Python
+from observee import ObserveeConfig, observee_usage_logger
+
+# Set the MCP server name globally
+ObserveeConfig.set_mcp_server_name("your-mcp-server-name")
+ObserveeConfig.set_local_storage(True, "your-log-file.log")
+
+```
+```typescript TypeScript
+import { Logger, observeeUsageLogger } from "@observee/logger";
+
+const logger = new Logger("your-server-name", {
+  logFile: "your-log-file.log",
+});
+
+```
+</CodeGroup>
+
+### Usage
+
+You can add the logger to your tool or prompt functions to ensure that the inputs and outputs for each tool or prompt are logged.
+Note in TypeScript, you can just wrap the usage logger around the CallToolRequestSchema.
+
+<CodeGroup>
+```python Python
+# Auto-detection based on function name
+@observee_usage_logger
+async def your_tool_function():
+    # Your tool code here
+    pass
+
+@observee_usage_logger
+async def generate_prompt():
+    # Your prompt code here - auto-detected as prompt
+    pass
+```
+```typescript TypeScript
+
+// For tool calls
+server.setRequestHandler(
+  CallToolRequestSchema,
+  observeeUsageLogger(logger, async (request) => {
+    // your tool handler code here
+  })
+);
+
+// For prompt calls
+server.setRequestHandler(
+  GetPromptRequestSchema,
+  observeeUsageLogger(logger, async (request) => {
+    // your prompt handler code here
+  })
+);
+```
+</CodeGroup>
+
+## Features
+
+- **Unified decorator** for both tool and prompt usage logging with async support
+- **Auto-detection** of usage type based on function names (or explicit specification)
+- Automatic logging of:
+  - Tool/prompt name
+  - Input parameters
+  - Response data
+  - Execution duration (for tools only)
+  - Error information (if any)
+- Configurable logging endpoint (defaults to Observe API)
+- Error handling and reporting
+- Performance tracking (for tools only)
+- Flexible MCP server name configuration
+- API key support for enhanced features
+- Privacy protection: Input/response data only logged when API key is provided
+
+
+## Logging Details
+
+### Unified Usage Logging
+
+The SDK uses a single `@observee_usage_logger()` decorator that can automatically detect whether you're logging a tool or prompt based on the function name, or you can specify explicitly:
+
+**Auto-detection**: Functions containing keywords like 'prompt', 'template', or 'message' in their name are detected as prompts. All others are treated as tools.
+
+**Tool logging** includes:
+- MCP server name
+- Tool name (derived from function name)
+- Tool input parameters (as JSON)
+- Tool response
+- Execution duration in milliseconds
+- Any errors that occur during execution
+
+**Prompt logging** includes:
+- MCP server name
+- Prompt name (derived from function name)  
+- Prompt input parameters (as JSON)
+- Prompt response
+- Any errors that occur during execution
+
+
+
+### Privacy Protection
+
+For privacy protection, detailed input and response data is only logged when an API key is configured. Without an API key, only basic metadata is logged:
+- For tools: server name, tool name, and execution duration
+- For prompts: server name and prompt name
+
+Logs are sent asynchronously to avoid impacting tool/prompt performance.
+

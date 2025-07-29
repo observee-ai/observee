@@ -1,0 +1,102 @@
+---
+title: "Mastra SDK"
+description: "Integrate Mastra with Model Context Protocol (MCP) and Observee for powerful tool and agent orchestration."
+---
+
+## Prerequisites
+
+If you haven't already, install the Mastra MCP package:
+```bash
+npm install @mastra/mcp@latest
+```
+
+---
+
+## Connecting Mastra to Observee's MCP Server
+
+You can connect your Mastra agent to Observee's secure, enterprise-ready MCP servers to access all your Observee-managed tools, agents, and workflows.
+
+First, configure the `MCPClient` to point to your Observee MCP endpoint. You can find your `{your_client_id}` and generate an API key in the Observee dashboard.
+
+```ts
+import { MCPClient } from "@mastra/mcp";
+
+const mcpClient = new MCPClient({
+  servers: {
+    observee: {
+      url: new URL("https://mcp.observee.ai/mcp?client_id={your_client_id}"), // Replace with your client ID
+      requestInit: {
+        headers: {
+          Authorization: "Bearer {observee_api_key}", // Replace with your API key
+        },
+      },
+    },
+  },
+});
+```
+
+### Using Tools from Observee
+
+Once the client is configured, you can fetch tools for your agent. Mastra supports two patterns:
+
+#### 1. Static Tools
+
+For simple scripts or single-user applications, fetch all tools once and initialize the agent with them.
+
+```ts
+import { Agent } from "@mastra/core/agent";
+
+// Fetch all available tools from Observee
+const tools = await mcpClient.getTools();
+
+// Create your agent with the static toolset
+const agent = new Agent({
+  tools,
+  // ...other agent config
+});
+
+// Use the agent to handle user prompts
+const response = await agent.generate("Summarize the latest sales data");
+console.log(response);
+```
+
+#### 2. Dynamic Toolsets
+
+For multi-tenant applications or when credentials change per-request, create a new MCP client for each request and pass the toolsets dynamically.
+
+```ts
+import { Agent } from "@mastra/core/agent";
+
+async function handleUserRequest(userPrompt: string, userApiKey: string) {
+  // Create a client for the specific user's request
+  const userMcpClient = new MCPClient({
+    servers: {
+      observee: {
+        url: new URL("https://mcp.observee.ai/mcp?client_id={your_client_id}"),
+        requestInit: {
+          headers: {
+            Authorization: `Bearer ${userApiKey}`,
+          },
+        },
+      },
+    },
+  });
+
+  // Fetch toolsets dynamically
+  const toolsets = await userMcpClient.getToolsets();
+
+  const agent = new Agent({ /* ... */ });
+  const response = await agent.stream(userPrompt, { toolsets });
+
+  await userMcpClient.disconnect();
+  return response;
+}
+```
+
+---
+
+## Learn More
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/agentsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)

@@ -1,0 +1,79 @@
+{
+  "name": "@observee/agents",
+  "author": "Observee",
+  "version": "1.0.1",
+  "description": "Observee SDK - A TypeScript SDK for MCP tool integration with LLM providers",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/observee-ai/observee.git"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "watch": "tsc --watch",
+    "dev": "tsc --watch",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "node --test",
+    "example:quick": "npm run build && node dist/examples/quick-test.js"
+  },
+  "keywords": [
+    "observee",
+    "mcp",
+    "agent",
+    "ai",
+    "llm",
+    "anthropic",
+    "openai",
+    "gemini",
+    "langchain",
+    "tools"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.56.0",
+    "@dmitryrechkin/json-schema-to-zod": "^1.0.1",
+    "@google/generative-ai": "^0.21.0",
+    "@langchain/anthropic": "^0.3.14",
+    "@langchain/core": "^0.3.66",
+    "@langchain/google-genai": "^0.1.9",
+    "@langchain/openai": "^0.5.15",
+    "@modelcontextprotocol/sdk": "^1.15.1",
+    "@pinecone-database/pinecone": "^6.1.1",
+    "@xenova/transformers": "^2.17.2",
+    "dotenv": "^16.6.1",
+    "eventsource": "^3.0.6",
+    "langchain": "^0.3.30",
+    "okapibm25": "^1.4.1",
+    "openai": "^4.81.0",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "ws": "^8.18.2",
+    "zod": "^3.25.48"
+  },
+  "devDependencies": {
+    "@types/eventsource": "^1.1.15",
+    "@types/node": "^22.12.1",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "eslint": "^9.18.0",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,81 @@
+---
+title: "Anthropic API"
+description: "Connect to Observee's MCP server directly using Anthropic's Python SDK"
+---
+
+## Overview
+
+The Anthropic Python SDK provides native support for MCP (Model Context Protocol) servers. This allows you to connect Claude directly to Observee's tool ecosystem without additional frameworks.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Python 3.8 or later installed
+- Required packages installed:
+  ```bash
+  pip install anthropic python-dotenv rich
+  ```
+- Your Observee client ID for identifying your customer
+- Your Observee API key for authentication
+- Anthropic API key
+
+## Example
+
+Connect Claude to Observee's MCP server and access all available tools:
+
+```python
+import anthropic
+from rich import print
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+# Your Observee MCP server URL
+# Option 1: Pass client_id as URL parameter
+url = 'https://mcp.observee.ai/mcp?client_id={your_client_id}'
+
+# Option 2: Pass client_id as header X-CLIENT-ID
+# url = 'https://mcp.observee.ai/mcp'
+# (Then add 'X-CLIENT-ID': '{your_client_id}' to request headers)
+
+client = anthropic.Anthropic()
+
+# Create streaming response with MCP server connection
+stream = client.beta.messages.create(
+    model="claude-sonnet-4-20250514",
+    max_tokens=1000,
+    messages=[{"role": "user", "content": "Check my latest email"}],
+    mcp_servers=[
+        {
+            "type": "url",
+            "url": url,
+            "name": "observee",
+            "authorization_token": "{observee_api_key}"  # Replace with your API key
+        }
+    ],
+    extra_headers={
+        "anthropic-beta": "mcp-client-2025-04-04"
+    },
+    stream=True
+)
+
+# Process the streaming response
+print("Streaming response:")
+for chunk in stream:
+    if chunk.type == "content_block_delta":
+        if chunk.delta.type == "text_delta":
+            print(chunk.delta.text, end="", flush=True)
+    elif chunk.type == "message_stop":
+        print("\n\nStream completed.")
+        break
+
+print()  # Final newline for clean output
+```
+
+
+## Learn More
+
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/authsdk/authentication)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)

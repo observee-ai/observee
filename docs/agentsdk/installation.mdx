@@ -1,0 +1,104 @@
+# Installation
+
+## Prerequisites
+
+- Python or TypeScript
+- An Observee account at [observee.ai](https://observee.ai)
+- API keys for your preferred LLM provider
+
+## Install the SDK
+
+<CodeGroup>
+
+```bash Python
+# Basic installation
+pip install mcp-agents
+
+# With optional dependencies
+pip install mcp-agents[embedding,cloud,dev]
+
+# With MCP Logger
+pip install observee
+```
+
+
+```bash TypeScript
+npm install @observee/agents
+```
+
+</CodeGroup>
+
+## Get Your API Keys
+
+### 1. Observee API Key
+
+1. Visit [observee.ai](https://observee.ai)
+2. Sign up or log in
+3. Navigate to API Keys
+4. Create a new API key (starts with `obs_`)
+
+### 2. LLM Provider Keys
+
+Choose your preferred provider:
+
+- **Anthropic**: [console.anthropic.com](https://console.anthropic.com)
+- **OpenAI**: [platform.openai.com](https://platform.openai.com)
+- **Google**: [makersuite.google.com](https://makersuite.google.com/app/apikey)
+
+## Environment Setup
+
+Create a `.env` file:
+
+```bash
+# Required
+OBSERVEE_API_KEY=obs_your_api_key_here
+
+# Choose your LLM provider
+ANTHROPIC_API_KEY=your_anthropic_key_here
+OPENAI_API_KEY=your_openai_key_here
+GOOGLE_API_KEY=your_gemini_key_here
+```
+
+## Test Installation
+
+<CodeGroup>
+
+```python Python
+from observee_agents import chat_with_tools
+
+try:
+    result = chat_with_tools(
+        message="Hello! What tools do you have?",
+        provider="anthropic",
+        observee_api_key="obs_your_key_here"
+    )
+    print("✅ Installation successful!")
+    print(f"Response: {result['content']}")
+except Exception as e:
+    print(f"❌ Installation issue: {e}")
+```
+
+
+```typescript TypeScript
+
+import { chatWithTools } from "@observee/agents";
+
+try {
+    const result = await chatWithTools("Hello! What tools do you have?", {
+        provider: "anthropic",
+        observeeApiKey: "obs_your_key_here"
+    });
+    console.log("✅ Installation successful!");
+    console.log(`Response: ${result.content}`);
+} catch (e) {
+    console.log(`❌ Installation issue: ${e}`);
+}
+```
+
+</CodeGroup>
+
+## Next Steps
+
+- [Configuration](/agentsdk/configuration)
+- [Quick Start](/quickstartmcpuse)
+- [Examples](/agentsdk/examples)

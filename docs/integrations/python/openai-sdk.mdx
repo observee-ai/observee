@@ -1,0 +1,100 @@
+---
+title: "OpenAI SDK (Python)"
+description: "Connect Observee with OpenAI's Python SDK using the agents library"
+---
+
+## Overview
+
+The OpenAI Python SDK can connect to Observee's MCP (Model Context Protocol) server using the `agents` library. This enables your Python-based agents to access Observee's powerful tool ecosystem, integrate with internal or external APIs, and leverage custom knowledge sources through a unified interface.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Python 3.10 or later installed
+- Required packages installed:
+  ```bash
+  pip install openai agents python-dotenv
+  ```
+- Your Observee client ID for identifying your customer
+- Your Observee API key for authentication
+- OpenAI API key
+
+## Example: Connecting an Agent to Observee's MCP Server
+
+Below is a complete example of how to set up an Agent that communicates with your Observee MCP server using Python:
+
+```python
+import asyncio
+from agents import Agent, Runner, set_default_openai_client
+from agents.mcp import MCPServerStreamableHttp
+from openai import AsyncOpenAI
+from openai.types.responses import ResponseTextDeltaEvent
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+async def main():
+    # Set up OpenAI client
+    client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    set_default_openai_client(client)
+    
+    # Instantiate the MCP server connection to Observee
+    # Replace {your_client_id} with your actual client ID from the Observee dashboard
+    mcp_server = MCPServerStreamableHttp(
+        name='Observee',
+        params={
+            'url': 'https://mcp.observee.ai/mcp?client_id={your_client_id}',
+            'headers': {
+                'Authorization': 'Bearer {observee_api_key}'  # Replace with your API key
+            }
+        }
+    )
+
+    # Create the Agent and register the MCP server
+    agent = Agent(
+        name='Observee Agent',
+        instructions='Use all available tools and knowledge to help users with their requests.',
+        mcp_servers=[mcp_server]
+    )
+    
+    try:
+        # Use MCP server as async context manager
+        async with mcp_server:
+            # Example query with streaming - the Agent will use appropriate Observee tools
+            result = Runner.run_streamed(
+                agent, 
+                'check my latest emails'
+            )
+            
+            # Stream the response as it comes
+            async for event in result.stream_events():
+                if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                    print(event.data.delta, end="", flush=True)
+            
+            print()  # Final newline
+            
+    except Exception as error:
+        print(f'Connection failed: {error}')
+        # Check your client ID, API key, and network connection
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+
+## Environment Setup
+
+Create a `.env` file with your credentials:
+
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+## Learn More
+
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/authsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [TypeScript OpenAI SDK Integration](/integrations/typescript/openai-sdk)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)

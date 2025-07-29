@@ -1,0 +1,90 @@
+---
+title: "LangGraph"
+description: "Build stateful agents with Observee tools using LangGraph"
+---
+
+## Overview
+
+LangGraph enables you to build complex, stateful agents that can use Observee's MCP tools. This integration combines LangGraph's powerful graph-based agent architecture with Observee's tool ecosystem.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Python 3.10 or later installed
+- Required packages installed:
+  ```bash
+  pip install langchain-mcp-adapters langgraph langchain langchain-openai
+  ```
+- Your Observee client ID for identifying your customer
+- Your Observee API key for authentication
+- OpenAI API key or other LLM provider credentials
+
+## Example: Building a Stateful Agent with Observee Tools
+
+This example demonstrates how to create a LangGraph agent that maintains state across interactions while using Observee tools:
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.graph import StateGraph, MessagesState, START
+from langgraph.prebuilt import ToolNode, tools_condition
+from langchain.chat_models import init_chat_model
+
+# Initialize the chat model
+model = init_chat_model("openai:gpt-4")
+
+# Configure the MCP client to connect to Observee
+# Replace {your_client_id} with your actual client ID from the Observee dashboard
+client = MultiServerMCPClient(
+    {
+        "observee": {
+            "url": "https://mcp.observee.ai/mcp?client_id={your_client_id}",
+            "transport": "streamable_http",
+            "headers": {
+                "Authorization": "Bearer {observee_api_key}"  # Replace with your API key
+            },
+        }
+    }
+)
+
+# Get all available tools from Observee
+tools = await client.get_tools()
+
+# Define the model calling function
+def call_model(state: MessagesState):
+    response = model.bind_tools(tools).invoke(state["messages"])
+    return {"messages": response}
+
+# Build the state graph
+builder = StateGraph(MessagesState)
+builder.add_node("call_model", call_model)
+builder.add_node("tools", ToolNode(tools))
+builder.add_edge(START, "call_model")
+builder.add_conditional_edges(
+    "call_model",
+    tools_condition,
+)
+builder.add_edge("tools", "call_model")
+
+# Compile the graph
+graph = builder.compile()
+
+# Use the agent - it maintains state across interactions
+response1 = await graph.ainvoke({
+    "messages": "Check my latest system metrics"
+})
+
+# Follow-up question uses the context from the previous interaction
+response2 = await graph.ainvoke({
+    "messages": "Based on those metrics, are there any issues I should address?"
+})
+```
+
+
+
+## Learn More
+
+- [LangChain Integration](/integrations/python/langchain)
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/authsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)

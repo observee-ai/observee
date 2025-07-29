@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.local
+pycache
+observee.egg-info
+__pycache__
+build.sh

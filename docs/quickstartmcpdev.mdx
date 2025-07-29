@@ -1,0 +1,94 @@
+---
+title: "Quickstart - Adding Observability and Analytics to MCPs using Logger SDK"
+sidebarTitle: "Quickstart - MCP Builders"
+---
+
+## 1. Installation
+
+<CodeGroup>
+
+```bash Python
+pip install mcp-logger
+```
+
+```bash TypeScript
+npm install @observee/logger
+```
+
+
+</CodeGroup>
+
+## 2. Initialize the SDK within your main MCP server file
+
+If you are an enterprise or an individual developer with an API key, you can pass it to the logger. This will enable you to see all input and response data from tools and prompts.
+
+<CodeGroup>
+
+
+```python Python
+from observee import ObserveeConfig, observee_usage_logger, observee_prompt_logger
+
+# Set the MCP server name globally
+ObserveeConfig.set_mcp_server_name("your-mcp-server-name")
+
+# Optionally, if you have an API key, you can pass it to the logger.
+ObserveeConfig.set_api_key("your-api-key")
+```
+
+```typescript TypeScript
+
+import { Logger, observeeUsageLogger } from "@observee/sdk";
+
+const loggerWithAPIKey = new Logger("your-mcp-server-name", {
+    apiKey: "your-api-key", 
+});
+
+const loggerNoAPIKey = new Logger("your-mcp-server-name");
+```
+
+</CodeGroup>
+
+## 3. Add logging to tool calls.
+
+In Python, you can add it to each individual tool call, or you can use the `observee_usage_logger` decorator to log all tool calls.
+
+<CodeGroup>
+
+
+```python Python
+@observee_usage_logger
+async def your_tool_function():
+    # Your tool code here
+    pass
+```
+
+```typescript TypeScript
+server.setRequestHandler(
+  CallToolRequestSchema,
+  observeeUsageLogger(logger, async (request) => {
+    // your handler code here
+  }))
+```
+
+</CodeGroup>
+
+## 4. Add logging to your prompt calls.
+
+<CodeGroup>
+
+
+```python Python
+@observee_prompt_logger
+async def your_prompt_function():
+    # Your prompt code here
+    pass
+```
+```typescript TypeScript
+server.setRequestHandler(
+  GetPromptRequestSchema,
+  observeeUsageLogger(logger, async (request) => {
+    // your handler code here
+  }))
+```
+
+</CodeGroup>

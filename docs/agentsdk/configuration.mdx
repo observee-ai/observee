@@ -1,0 +1,164 @@
+---
+title: "Configuration"
+description: "Configuration options for the Observee Agents SDK"
+---
+
+## Environment Variables
+
+### Required
+
+```bash
+# Observee Configuration
+OBSERVEE_API_KEY=obs_your_api_key_here
+OBSERVEE_CLIENT_ID=your_client_id_here  # Optional
+
+# LLM Provider Keys (choose one or more)
+ANTHROPIC_API_KEY=your_anthropic_key_here
+OPENAI_API_KEY=your_openai_key_here
+GOOGLE_API_KEY=your_gemini_key_here
+```
+
+### Optional
+
+```bash
+# Tool filtering
+MCP_FILTER_TYPE=bm25  # bm25, local_embedding, cloud
+
+# Cloud filtering (if using cloud filter)
+PINECONE_API_KEY=your_pinecone_key_here
+```
+
+## Function Parameters
+
+All configuration can be passed as function parameters:
+
+```python
+from observee_agents import chat_with_tools
+
+result = chat_with_tools(
+    message="Hello",
+    
+    # Provider settings
+    provider="anthropic",
+    model="claude-sonnet-4-20250514",
+    
+    # Authentication
+    observee_api_key="obs_your_key",
+    client_id="custom_client_123",
+    
+    # Tool filtering
+    enable_filtering=True,
+    filter_type="bm25",
+    max_tools=10,
+    min_score=7.0,
+    
+    # Performance
+    sync_tools=False,
+    
+    # LLM parameters
+    temperature=0.7,
+    max_tokens=1000,
+    top_p=0.9
+)
+```
+
+## Provider-Specific Settings
+
+### Anthropic Claude
+
+```python
+result = chat_with_tools(
+    message="Hello",
+    provider="anthropic",
+    model="claude-sonnet-4-20250514",
+    temperature=0.7,
+    max_tokens=1000,
+    top_p=0.9,
+    top_k=40
+)
+```
+
+### OpenAI GPT
+
+```python
+result = chat_with_tools(
+    message="Hello",
+    provider="openai",
+    model="gpt-4o",
+    temperature=0.7,
+    max_tokens=1000,
+    top_p=0.9,
+    frequency_penalty=0.0,
+    presence_penalty=0.0
+)
+```
+
+### Google Gemini
+
+```python
+result = chat_with_tools(
+    message="Hello",
+    provider="gemini",
+    model="gemini-2.5-pro",
+    temperature=0.7,
+    max_tokens=1000,
+    top_p=0.9,
+    top_k=40
+)
+```
+
+## Tool Filtering Configuration
+
+### BM25 Filter (Default)
+
+```python
+result = chat_with_tools(
+    message="Gmail email management",
+    filter_type="bm25",
+    max_tools=5,
+    min_score=8.0
+)
+```
+
+### Local Embedding Filter
+
+```python
+# Requires: pip install mcp-agents[embedding]
+result = chat_with_tools(
+    message="Help me be productive",
+    filter_type="local_embedding",
+    max_tools=10,
+    min_score=7.0
+)
+```
+
+### Cloud Filter
+
+```python
+# Requires: pip install mcp-agents[cloud]
+# Requires: PINECONE_API_KEY and OPENAI_API_KEY
+result = chat_with_tools(
+    message="Complex analytical task",
+    filter_type="cloud",
+    max_tools=15,
+    min_score=6.0
+)
+```
+
+### Disable Filtering
+
+```python
+result = chat_with_tools(
+    message="What can you do?",
+    enable_filtering=False  # Uses all available tools
+)
+```
+
+
+
+
+## Next Steps
+
+- [Examples](/agentsdk/examples)
+- [Tool Management](/agentsdk/tools)
+- [Chat Interface](/agentsdk/chat)

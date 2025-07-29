@@ -1,0 +1,64 @@
+---
+title: "LangChain"
+description: "Connect Observee with LangChain using MCP adapters"
+---
+
+## Overview
+
+LangChain can connect to Observee's MCP (Model Context Protocol) server using the `langchain-mcp-adapters` package. This enables your LangChain applications to access Observee's tool ecosystem through the familiar LangChain interface.
+
+## Prerequisites
+
+Before getting started, ensure you have:
+- Python 3.10 or later installed
+- Required packages installed:
+  ```bash
+  pip install langchain-mcp-adapters langgraph langchain
+  ```
+- Your Observee client ID for identifying your customer
+- Your Observee API key for authentication
+- OpenAI API key or other LLM provider credentials
+
+## Example: Creating a React Agent with Observee Tools
+
+This example shows how to create a simple React agent that can use tools from your Observee MCP server:
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+
+# Configure the MCP client to connect to Observee
+# Replace {your_client_id} with your actual client ID from the Observee dashboard
+client = MultiServerMCPClient(
+    {
+        "observee": {
+            "transport": "streamable_http",
+            "url": "https://mcp.observee.ai/mcp?client_id={your_client_id}",
+            "headers": {
+                "Authorization": "Bearer {observee_api_key}"  # Replace with your API key
+            },
+        }
+    }
+)
+
+# Get all available tools from Observee
+tools = await client.get_tools()
+
+# Create a React agent with the tools
+agent = create_react_agent("openai:gpt-4.1", tools)
+
+# Use the agent - it will automatically use appropriate Observee tools
+response = await agent.ainvoke({
+    "messages": "check my latest emails and add to my sheets"
+})
+
+print(response)
+```
+
+## Learn More
+
+- [LangGraph Integration](/integrations/python/langgraph)
+- [Observee SDK Documentation](/agentsdk/overview)
+- [Authentication Guide](/authsdk/authentication)
+- [Tool Management](/agentsdk/tools)
+- [Contact Support](mailto:contact@observee.ai) or join our [Discord Community](https://discord.gg/jnf8yHWJ)

@@ -1,0 +1,214 @@
+---
+title: "Quickstart - Using MCPs in AI agents"
+description: "Get up and running with Observee Agents in under 5 minutes"
+sidebarTitle: "Quickstart - Agent Builders"
+---
+
+## Step 1: Get your API Keys and Set up Marketplace
+
+Go to `https://app.observee.ai` and create an API key for your profile. Then click `Connect` and enable servers
+
+### **Get Your API Keys**
+
+1. **Observee API Key**: Sign up at [**observee.ai**](http://observee.ai) → API Keys → Create new key
+2. **LLM API Key**: Get from [**Anthropic**](https://console.anthropic.com/), [**OpenAI**](https://platform.openai.com/), or [**Google**](https://aistudio.google.com/)
+
+### **Environment Setup**
+
+Create a `.env` file:
+
+```shellscript
+# Required
+OBSERVEE_API_KEY=obs_your_api_key_here
+
+# Choose one LLM provider
+ANTHROPIC_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
+GOOGLE_API_KEY=your_key_here
+```
+
+## Step 2: Authenticate & Get Your Client ID
+
+<Note>
+  This step is optional for those who are not setting up an OAuth server.
+</Note>
+
+If you are using an OAuth server like Gmail, you can authenticate directly from our Auth SDK to get a client ID for accessing tools. Learn more at [Auth SDK Overview](/authsdk/overview).
+
+**3.1 Install the Auth SDK**
+
+<CodeGroup>
+
+```bash Python
+pip install mcp-agents
+```
+
+
+```bash TypeScript
+npm install @observee/auth
+```
+
+</CodeGroup>
+
+**3.2 Start the Auth flow for whichever OAuth Server you have enabled**
+
+<CodeGroup>
+
+```python Python
+from observee_agents import call_mcpauth_login
+
+# Start authentication flow (optionally provide your own client_id)
+response = call_mcpauth_login(
+    auth_server="gmail",
+    client_id="<client_id (uuid)>"  # Optional: use your own UUID
+)
+print(f"Visit: {response['url']}")
+
+# After you visit the URL and authenticate, you'll receive:
+# {"success":true,"client_id":"<client_id (uuid)>"}
+```
+
+
+```typescript TypeScript
+import { callMcpAuthLogin } from "@observee/auth";
+
+// Start authentication flow (optionally provide your own client_id)
+const response = await callMcpAuthLogin({
+    authServer: "gmail",
+    clientId: "<client_id (uuid)>"  // Optional: use your own UUID
+});
+console.log(`Visit: ${response.url}`);
+
+// After you visit the URL and authenticate, you'll receive:
+// {"success":true,"client_id":"<client_id (uuid)>"}
+```
+
+</CodeGroup>
+
+<Note>
+  This will open a browser window for OAuth authentication. After successful login, you'll receive a `client_id` that you'll use in all subsequent API calls. You can optionally provide your own UUID as the client_id.
+
+  **Tip:** You can reuse the same client_id to authenticate multiple services. Each service you authenticate adds its tools to that client_id's available toolset.
+</Note>
+
+## Step 3: Install the Agents SDK
+
+<CodeGroup>
+
+```bash Python
+pip install mcp-agents
+```
+
+
+```bash TypeScript
+npm install @observee/agents
+```
+
+</CodeGroup>
+
+### Your First Tool-Powered Conversation
+
+<CodeGroup>
+
+```python Python
+from observee_agents import chat_with_tools
+
+# Use the client_id from authentication
+result = chat_with_tools(
+    message="Search for recent news about AI developments",
+    provider="anthropic",
+    client_id="<client_id (uuid)>"  # Use the client_id from Step 2
+)
+
+print("🤖 AI Response:", result["content"])
+print("🔧 Tools Used:", len(result["tool_calls"]))
+```
+
+
+```typescript TypeScript
+import { chatWithTools } from "@observee/agents";
+
+// Use the client_id from authentication
+const result = await chatWithTools("Search for recent news about AI developments", {
+    provider: "anthropic",
+    clientId: "<client_id (uuid)>"  // Use the client_id from Step 2
+});
+
+console.log("🤖 AI Response:", result.content);
+```
+
+</CodeGroup>
+
+### Streaming Responses
+
+<CodeGroup>
+
+```python Python
+import asyncio
+from observee_agents import chat_with_tools_stream
+
+async def stream_example():
+    async for chunk in chat_with_tools_stream(
+        message="Check my emails and summarize them",
+        provider="anthropic"
+    ):
+        if chunk["type"] == "content":
+            print(chunk["content"], end="", flush=True)
+
+asyncio.run(stream_example())
+```
+
+
+```typescript TypeScript
+import { chatWithToolsStream } from "@observee/agents";
+
+for await (const chunk of chatWithToolsStream("Check my emails and summarize them", {
+    provider: "anthropic"
+})) {
+    if (chunk.type === "content") {
+        process.stdout.write(chunk.content);
+    }
+}
+```
+
+</CodeGroup>
+
+### Conversation with Memory
+
+<CodeGroup>
+
+```python Python
+# First message
+result1 = chat_with_tools(
+    message="Search for emails about the product launch",
+    client_id="<client_id (uuid)>",
+    session_id="assistant_001"
+)
+
+# Follow-up (remembers context)
+result2 = chat_with_tools(
+    message="What date was mentioned in those emails?",
+    client_id="<client_id (uuid)>",
+    session_id="assistant_001"  # Same session = memory
+)
+```
+
+</CodeGroup>
+
+🎉 **Congratulations\!** You can now:
+
+1. **Connect to 1000\+ tools** - Gmail, YouTube, Linear, Slack, and more
+2. **Use multiple LLM providers** - Anthropic, OpenAI, Gemini and Groq
+3. **Created conversations with memory** - Context preserved across messages
+
+## Next Steps
+
+- [**Examples**](/examples/python/basic-usage) - More code examples
+- [**Agents SDK**](/agentsdk/overview) - Complete SDK reference
+- [**Tool Management**](/agentsdk/tools) - Work with tools directly
+- [**Configuration**](/agentsdk/configuration) - Advanced settings
+
+## Need Help?
+
+- 💬 [Discord Community](https://discord.gg/jnf8yHWJ)
+- 📧 [Email Support](mailto:contact@observee.ai)

@@ -1,0 +1,211 @@
+## Auth SDK Setup
+
+### Environment Variable Setup
+
+Set your Observee API key as an environment variable:
+
+```bash
+export OBSERVEE_API_KEY="obs_your_api_key_here"
+```
+
+## OAuth Authentication Flow
+
+### Step 1: Authenticate with a Service
+
+Use the Auth SDK to authenticate with services like Gmail, Slack, etc. and get a client_id:
+
+<CodeGroup>
+
+```python Python
+from observee_agents import call_mcpauth_login, get_available_servers
+
+# See available services
+servers = get_available_servers()
+print(f"Available: {servers['supported_servers']}")
+
+# Start authentication (optionally provide your own client_id)
+response = call_mcpauth_login(
+    auth_server="gmail",
+    client_id="<client_id (uuid)>"  # Optional: use your own UUID
+)
+print(f"Visit: {response['url']}")
+
+# After authentication, you'll receive:
+# {"success":true,"client_id":"<client_id (uuid)>"}
+```
+
+
+```typescript TypeScript
+import { callMcpauthLogin, getAvailableServers } from "@observee/agents";
+
+// See available services
+const servers = await getAvailableServers();
+console.log(`Available: ${servers.supported_servers}`);
+
+// Start authentication (optionally provide your own client_id)
+const response = await callMcpAuthLogin({
+    authServer: "gmail",
+    clientId: "<client_id (uuid)>"  // Optional: use your own UUID
+});
+console.log(`Visit: ${response.url}`);
+
+// After authentication, you'll receive:
+// {"success":true,"client_id":"<client_id (uuid)>"}
+```
+
+</CodeGroup>
+
+### Step 2: Use the Client ID
+
+After authentication, use the returned client_id in your API calls. **Tools are automatically filtered based on which services you've authenticated with this client_id.**
+
+<Note>
+  **Important:** You can reuse the same client_id to authenticate multiple services. Each time you authenticate a new service with an existing client_id, that client_id gains access to the new service's tools while retaining access to previously authenticated services.
+</Note>
+
+<CodeGroup>
+
+```python Python
+from observee_agents import chat_with_tools
+
+# Use the client_id from authentication
+# Only Gmail tools will be available since we authenticated Gmail
+result = chat_with_tools(
+    message="Check my Gmail inbox and summarize important emails",
+    provider="anthropic",
+    client_id="<client_id (uuid)>"  # From Step 1
+)
+```
+
+
+```typescript TypeScript
+import { chatWithTools } from "@observee/agents";
+
+// Use the client_id from authentication
+// Only Gmail tools will be available since we authenticated Gmail
+const result = await chatWithTools("Check my Gmail inbox and summarize important emails", {
+    provider: "anthropic",
+    clientId: "<client_id (uuid)>"  // From Step 1
+});
+```
+
+</CodeGroup>
+
+## Available Services
+
+50\+ services are supported including:
+
+- **Email & Calendar**: Gmail, Google Calendar, Outlook
+- **Productivity**: Google Docs, Google Sheets, Google Drive, OneDrive
+- **Project Management**: Linear, Asana, Jira (Atlassian)
+- **Communication**: Slack, Discord
+- **Knowledge**: Notion, Airtable
+- **Development**: GitHub, Supabase
+- **And many more...**
+
+### Check Authenticated Services
+
+You can check which services are authenticated for a specific client_id:
+
+<CodeGroup>
+
+```python Python
+from observee_agents import get_servers_by_client
+
+# Check which services this client_id has access to
+authenticated = get_servers_by_client(
+    client_id="<client_id (uuid)>"
+)
+print(f"Authenticated services: {authenticated['servers']}")
+# Output: {"servers": ["gmail", "slack"]}
+```
+
+
+```typescript TypeScript
+import { getServersByClient } from "@observee/agents";
+
+// Check which services this client_id has access to
+const authenticated = await getServersByClient({
+    clientId: "<client_id (uuid)>"
+});
+console.log(`Authenticated services: ${authenticated.servers}`);
+// Output: {"servers": ["gmail", "slack"]}
+```
+
+</CodeGroup>
+
+## Multiple Service Authentication
+
+**You can reuse the same client_id to authenticate multiple services.** This allows you to access tools from different services with a single client_id:
+
+<CodeGroup>
+
+```python Python
+# Option 1: Use the same client_id for multiple services
+my_client_id = "<client_id (uuid)>"
+
+# Authenticate Gmail
+gmail_response = call_mcpauth_login(
+    auth_server="gmail",
+    client_id=my_client_id
+)
+
+# Authenticate Slack with the SAME client_id
+slack_response = call_mcpauth_login(
+    auth_server="slack", 
+    client_id=my_client_id  # Reusing the same client_id
+)
+
+# Now this client_id has access to both Gmail AND Slack tools
+result = chat_with_tools(
+    message="Check my emails and post a summary to Slack",
+    client_id=my_client_id  # Can use both services!
+)
+
+# Option 2: Use different client_ids for separate sessions
+# (Each client_id will only have access to its own authenticated services)
+```
+
+
+```typescript TypeScript
+// Option 1: Use the same client_id for multiple services
+const myClientId = "<client_id (uuid)>";
+
+// Authenticate Gmail
+const gmailResponse = await callMcpAuthLogin({
+    authServer: "gmail",
+    clientId: myClientId
+});
+
+// Authenticate Slack with the SAME client_id
+const slackResponse = await callMcpAuthLogin({
+    authServer: "slack",
+    clientId: myClientId  // Reusing the same client_id
+});
+
+// Now this client_id has access to both Gmail AND Slack tools
+const result = await chatWithTools("Check my emails and post a summary to Slack", {
+    clientId: myClientId  // Can use both services!
+});
+
+// Option 2: Use different client_ids for separate sessions
+// (Each client_id will only have access to its own authenticated services)
+```
+
+</CodeGroup>
+
+## Troubleshooting
+
+**Invalid API Key**: Check your key starts with `obs_`
+
+**OAuth Failed**: Make sure you completed the authentication flow in your browser
+
+**Permission Denied**: Check that you've authenticated the service for this client_id
+
+**Tool Not Found**: Ensure you've authenticated with the correct service
+
+## Next Steps
+
+- [Chat Interface](/agentsdk/chat)
+- [Tool Management](/agentsdk/tools)
+- [Examples](/examples/python/basic-usage)

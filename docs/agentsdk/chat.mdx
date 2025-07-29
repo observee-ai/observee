@@ -1,0 +1,379 @@
+---
+title: "Chat Interface"
+description: "AI conversations with tool access - both standard and streaming"
+---
+
+## Basic Usage
+
+<CodeGroup>
+
+```python Python
+from observee_agents import chat_with_tools
+
+result = chat_with_tools(
+    message="Search for recent AI news",
+    provider="anthropic",
+    observee_api_key="obs_your_key_here"
+)
+
+print(result["content"])
+```
+
+
+```typescript TypeScript
+
+import { chatWithTools } from "@observee/agents";
+
+const result = await chatWithTools("Search for recent AI news", {
+    provider: "anthropic",
+    observeeApiKey: "obs_your_key_here"
+});
+
+console.log(result.content);
+```
+
+</CodeGroup>
+
+## Streaming Responses
+
+<CodeGroup>
+
+```python Python
+import asyncio
+from observee_agents import chat_with_tools_stream
+
+async def stream_example():
+    async for chunk in chat_with_tools_stream(
+        message="What's the weather like today?",
+        provider="anthropic",
+        observee_api_key="obs_your_key_here"
+    ):
+        if chunk["type"] == "content":
+            print(chunk["content"], end="", flush=True)
+        elif chunk["type"] == "final_content":
+            print(chunk["content"], end="", flush=True)
+        elif chunk["type"] == "tool_result":
+            print(f"\n🔧 [Tool: {chunk['tool_name']}]")
+
+asyncio.run(stream_example())
+```
+
+
+```typescript TypeScript
+
+import { chatWithToolsStream } from "@observee/agents";
+
+try {
+    for await (const chunk of chatWithToolsStream("What's the weather like today?", {
+        provider: "anthropic",
+        observeeApiKey: "obs_your_key_here"
+    })) {
+        if (chunk.type === "content") {
+            console.log(chunk.content); 
+        }
+    }
+} catch (e) {
+    console.log(`Error: ${e}`);
+}
+```
+
+</CodeGroup>
+
+## Parameters
+
+| Parameter          | Type    | Default       | Description                                             |
+| ------------------ | ------- | ------------- | ------------------------------------------------------- |
+| `message`          | `str`   | _required_    | Your message or query                                   |
+| `provider`         | `str`   | `"anthropic"` | LLM provider: `"anthropic"`, `"openai"`, `"gemini"`     |
+| `model`            | `str`   | `None`        | Specific model (auto-detected if not provided)          |
+| `observee_api_key` | `str`   | `None`        | Your Observee API key                                   |
+| `enable_filtering` | `bool`  | `True`        | Whether to filter tools                                 |
+| `filter_type`      | `str`   | `"bm25"`      | Filter method: `"bm25"`, `"local_embedding"`, `"cloud"` |
+| `max_tools`        | `int`   | `20`          | Maximum tools to provide                                |
+| `temperature`      | `float` | `0.7`         | LLM temperature                                         |
+| `max_tokens`       | `int`   | `1000`        | Maximum response tokens                                 |
+| `session_id`       | `str`   | `None`        | Session ID for conversation history                     |
+| `system_prompt`    | `str`   | `None`        | Custom system prompt                                    |
+
+## Response Formats
+
+### Standard Response
+
+```python
+{
+    "content": "AI response text",
+    "tool_calls": [{"name": "tool_name", "input": {...}}],
+    "tool_results": [{"tool": "tool_name", "result": "..."}],
+    "filtered_tools_count": 5,
+    "used_filtering": True
+}
+```
+
+### Streaming Chunk Types
+
+```python
+# Content chunk
+{
+    "type": "content",
+    "content": "streaming text content"
+}
+
+# Tool result chunk
+{
+    "type": "tool_result", 
+    "tool_name": "tool_name",
+    "result": "tool output"
+}
+
+# Error chunk
+{
+    "type": "error",
+    "error": "error message"
+}
+
+# Session metadata chunk
+{
+    "type": "done",
+    "session_id": "session_123",  # When using conversation history
+    "final_response": {...}
+}
+```
+
+## Examples
+
+### Different Providers
+
+<CodeGroup>
+
+```python Python
+# Anthropic Claude
+result = chat_with_tools(
+    message="Analyze this data",
+    provider="anthropic",
+    model="claude-sonnet-4-20250514"
+)
+
+# OpenAI GPT
+result = chat_with_tools(
+    message="Write a summary",
+    provider="openai",
+    model="gpt-4o"
+)
+
+# Google Gemini
+result = chat_with_tools(
+    message="Search for information",
+    provider="gemini",
+    model="gemini-2.5-pro"
+)
+```
+
+
+```typescript TypeScript
+
+
+import { chatWithTools } from "@observee/agents";
+
+const result1 = await chatWithTools("Analyze this data", {
+    provider: "anthropic",
+    model: "claude-sonnet-4-20250514"
+});
+
+console.log(result.content);
+
+const result2 = await chatWithTools("Write a summary", {
+    provider: "openai",
+    model: "gpt-4o"
+});
+
+console.log(result2.content);
+
+const result3 = await chatWithTools("Search for information", {
+    provider: "gemini",
+    model: "gemini-2.5-pro"
+});
+
+console.log(result3.content);
+
+
+```
+
+</CodeGroup>
+
+### Tool Filtering
+
+<CodeGroup>
+
+```python Python
+# Fast keyword filtering (default)
+result = chat_with_tools(
+    message="Gmail email management",
+    filter_type="bm25"
+)
+
+# Semantic filtering
+result = chat_with_tools(
+    message="Help me be productive",
+    filter_type="local_embedding"
+)
+
+# No filtering - all tools
+result = chat_with_tools(
+    message="What can you do?",
+    enable_filtering=False
+)
+```
+
+
+```typescript TypeScript
+
+import { chatWithTools } from "@observee/agents";
+
+const result = await chatWithTools("Gmail email management", {
+    filter_type: "bm25"
+});
+
+console.log(result.content);   
+```
+
+</CodeGroup>
+
+## Conversation Features
+
+### Conversation History
+
+<CodeGroup>
+
+```python Python
+from observee_agents import chat_with_tools_stream, get_conversation_history
+
+# Create a conversation with memory
+async for chunk in chat_with_tools_stream(
+    message="Search my emails",
+    session_id="my_assistant",
+    provider="anthropic"
+):
+    # Handle response...
+
+# Follow-up - remembers context!
+async for chunk in chat_with_tools_stream(
+    message="Summarize the first email you found",
+    session_id="my_assistant"  # Same session = memory
+):
+    # Handle response...
+
+# Check conversation history
+history = get_conversation_history("my_assistant")
+print(f"Conversation has {len(history)} messages")
+```
+
+
+```typescript TypeScript
+
+import { chatWithToolsStream, getConversationHistory } from "@observee/agents";
+
+for await (const chunk of chatWithToolsStream("Search my emails", {
+    provider: "anthropic"
+})) {
+    if (chunk.type === "content") {
+        console.log(chunk.content); 
+    }
+}
+
+const history = await getConversationHistory("my_assistant");
+console.log(`Conversation has ${history.length} messages`);
+```
+
+</CodeGroup>
+
+### Streaming with Conversation History
+
+<CodeGroup>
+
+```python Python
+import asyncio
+from observee_agents import chat_with_tools_stream, get_conversation_history
+
+async def conversational_streaming():
+    session_id = "streaming_assistant"
+    custom_prompt = "You are a helpful assistant. Stream responses naturally."
+    
+    print("💬 First streaming message:")
+    async for chunk in chat_with_tools_stream(
+        message="Search for emails about meetings",
+        provider="anthropic",
+        session_id=session_id,  # 🆕 Session for memory
+        system_prompt=custom_prompt,  # 🆕 Custom system prompt
+        observee_api_key=os.getenv("OBSERVEE_API_KEY")
+    ):
+        if chunk["type"] == "content":
+            print(chunk["content"], end="", flush=True)
+        elif chunk["type"] == "tool_result":
+            print(f"\n🔧 [Tool: {chunk['tool_name']}]")
+        elif chunk["type"] == "done":
+            print(f"\n✅ Session: {chunk.get('session_id')}")
+    
+    print("\n" + "="*40 + "\n💬 Follow-up streaming (remembers context):")
+    
+    async for chunk in chat_with_tools_stream(
+        message="What was the subject of the first meeting?",
+        session_id=session_id,  # Same session = memory!
+        observee_api_key=os.getenv("OBSERVEE_API_KEY")
+    ):
+        if chunk["type"] == "content":
+            print(chunk["content"], end="", flush=True)
+        elif chunk["type"] == "final_content":
+            print(chunk["content"], end="", flush=True)
+    
+    # Check conversation history
+    history = get_conversation_history(session_id)
+    print(f"\n📊 Total messages in conversation: {len(history)}")
+
+asyncio.run(conversational_streaming())
+```
+
+</CodeGroup>
+
+### Custom System Prompts
+
+<CodeGroup>
+
+```python Python
+# Create specialized assistants
+result = chat_with_tools(
+    message="Help me organize my tasks",
+    system_prompt="You are an expert productivity coach. Focus on actionable advice.",
+    provider="anthropic"
+)
+
+# Different assistant for different tasks
+result = chat_with_tools(
+    message="Analyze this data",
+    system_prompt="You are a data scientist. Provide technical insights.",
+    provider="anthropic"
+)
+```
+
+</CodeGroup>
+
+### Custom Configuration
+
+<CodeGroup>
+
+```python Python
+result = chat_with_tools(
+    message="Creative writing task",
+    provider="openai",
+    temperature=0.9,
+    max_tokens=2000,
+    max_tools=10
+)   
+```
+
+</CodeGroup>
+
+## Next Steps
+
+- [Tool Management](/agentsdk/tools)
+- [Configuration](/agentsdk/configuration)
+- [Examples](/agentsdk/examples)
