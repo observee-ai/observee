@@ -1,8 +1,11 @@
 <div align="center">
-  <a href="https://observee.ai/">
-    <img src="public/images/observee_white.png" alt="Observee Logo" width="70%"/>
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./public/images/observee_white.png">
+    <source media="(prefers-color-scheme: light)" srcset="./public/images/observee_large.png">
+    <img src="./public/images/observee_white.png" width="80%" style="margin: 20px auto;" alt="Observee Logo">
+  </picture>
 </div>
+
 
 <p align="center">
   <a href="https://observee.ai">🌐 Website</a>  | 
