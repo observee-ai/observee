@@ -1,0 +1,77 @@
+---
+title: "TypeScript Examples"
+description: "Basic examples for common use cases in TypeScript"
+---
+
+## Email Management
+
+```typescript
+import { chatWithTools } from "@observee/agents";
+
+// Check and summarize emails
+const result = await chatWithTools({
+    message: "Check my Gmail inbox and summarize important emails from today",
+    provider: "anthropic"
+});
+
+console.log(result.content);
+```
+
+## YouTube Content Analysis
+
+```typescript
+// Get video transcript and analyze
+const result = await chatWithTools({
+    message: "Get the transcript from this YouTube video and create a summary: https://youtube.com/watch?v=example",
+    provider: "openai"
+});
+
+console.log(result.content);
+```
+
+## Project Management
+
+```typescript
+// Create Linear issue
+const result = await chatWithTools({
+    message: "Create a Linear issue titled 'Fix login bug' with description 'Users cannot login with Google OAuth'",
+    provider: "gemini"
+});
+
+console.log(result.content);
+```
+
+## Web Search
+
+```typescript
+// Search and analyze
+const result = await chatWithTools({
+    message: "Search for the latest TypeScript 5.0 features and explain the most important ones",
+    provider: "anthropic"
+});
+
+console.log(result.content);
+```
+
+## Streaming Example
+
+```typescript
+import { chatWithToolsStream } from "@observee/agents";
+
+try {
+    for await (const chunk of chatWithToolsStream({
+        message: "What's the weather like today?",
+        provider: "anthropic",
+        observeeApiKey: "obs_your_key_here"
+    })) {
+        if (chunk.type === "content") {
+            process.stdout.write(chunk.content);
+        } else if (chunk.type === "tool_result") {
+            console.log(`\n🔧 [Tool: ${chunk.toolName}]`);
+        }
+    }
+} catch (e) {
+    console.log(`Error: ${e}`);
+}
+```
+

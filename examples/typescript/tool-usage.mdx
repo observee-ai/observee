@@ -1,0 +1,99 @@
+---
+title: "Tool Usage"
+description: "Direct tool execution and discovery in TypeScript"
+---
+
+## Direct Tool Execution
+
+```typescript
+import { executeTool } from "@observee/agents";
+
+// Get YouTube transcript directly
+const transcript = await executeTool({
+    toolName: "youtube_get_transcript",
+    toolInput: { videoUrl: "https://youtube.com/watch?v=example" }
+});
+
+// Search web directly
+const searchResults = await executeTool({
+    toolName: "brave_search",
+    toolInput: { query: "TypeScript 5.0 features" }
+});
+
+// Create Linear issue directly
+const issue = await executeTool({
+    toolName: "linear_create_issue",
+    toolInput: {
+        title: "New Feature Request",
+        description: "Add dark mode support"
+    }
+});
+```
+
+## Tool Discovery
+
+```typescript
+import { listTools } from "@observee/agents";
+
+// List all available tools
+const allTools = await listTools({ observeeApiKey: "obs_your_key_here" });
+console.log(`Found ${allTools.length} tools`);
+
+allTools.slice(0, 5).forEach(tool => {
+    console.log(`- ${tool.name}: ${tool.description}`);
+});
+```
+
+## Filter Tools by Task
+
+```typescript
+import { filterTools } from "@observee/agents";
+
+// Find productivity tools
+const productivityTools = await filterTools({
+    query: "productivity task management",
+    maxTools: 5
+});
+
+productivityTools.forEach(tool => {
+    console.log(`📋 ${tool.name}: ${tool.description}`);
+});
+
+// Find communication tools
+const commTools = await filterTools({
+    query: "communication messaging slack email",
+    maxTools: 3
+});
+
+commTools.forEach(tool => {
+    console.log(`💬 ${tool.name}: ${tool.description}`);
+});
+
+// Find content creation tools
+const contentTools = await filterTools({
+    query: "youtube video content creation",
+    maxTools: 5
+});
+
+contentTools.forEach(tool => {
+    console.log(`🎥 ${tool.name}: ${tool.description}`);
+});
+```
+
+## Get Tool Information
+
+```typescript
+import { getToolInfo } from "@observee/agents";
+
+// Get detailed info about a specific tool
+const toolInfo = await getToolInfo({
+    toolName: "youtube_get_transcript",
+    observeeApiKey: "obs_your_key_here"
+});
+
+if (toolInfo) {
+    console.log(`Tool: ${toolInfo.name}`);
+    console.log(`Description: ${toolInfo.description}`);
+    console.log(`Parameters: ${toolInfo.parameters}`);
+}
+```
