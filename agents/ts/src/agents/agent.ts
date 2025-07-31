@@ -1080,6 +1080,27 @@ When asked about web content, YouTube videos, or anything that requires external
     };
   }
 
+  /**
+   * Get the MCP client for direct tool operations
+   */
+  getMcpClient(): MCPClientWrapper {
+    return this.mcp;
+  }
+
+  /**
+   * Get the tool filter for tool filtering operations
+   */
+  getToolFilter(): BaseToolFilter | undefined {
+    return this.toolFilter;
+  }
+
+  /**
+   * Get all tools loaded from the MCP server
+   */
+  getAllTools(): any[] {
+    return this.allTools;
+  }
+
   async close(): Promise<void> {
     await this.mcp.close();
   }

@@ -7,8 +7,10 @@ import { MCPAgent } from './agents/agent.js';
 import {
   AgentConfig,
   ChatWithToolsResponse,
+  FilteredTool,
   ObserveeConfig,
-  StreamChunk
+  StreamChunk,
+  ToolInfo
 } from './types.js';
 
 // Load environment variables
@@ -345,6 +347,227 @@ export async function* chatWithToolsStream(
     for await (const chunk of agent.chatWithToolsStream(message, maxTools, minScore)) {
       yield chunk;
     }
+  } finally {
+    // Clean up
+    await agent.close();
+  }
+}
+
+/**
+ * List all available tools from the MCP server
+ * 
+ * @param options - Configuration options
+ * @returns Array of tools with name, description, and input schema
+ * 
+ * @example
+ * ```typescript
+ * import { listTools } from '@observee/agents';
+ * 
+ * const tools = await listTools({
+ *   observeeApiKey: "obs_your_key_here"
+ * });
+ * console.log(`Found ${tools.length} tools`);
+ * for (const tool of tools.slice(0, 5)) {
+ *   console.log(`- ${tool.name}: ${tool.description}`);
+ * }
+ * ```
+ */
+export async function listTools(options: {
+  observeeUrl?: string;
+  observeeApiKey?: string;
+  clientId?: string;
+  serverName?: string;
+} = {}): Promise<ToolInfo[]> {
+  const {
+    observeeUrl,
+    observeeApiKey,
+    clientId,
+    serverName = 'observee'
+  } = options;
+
+  // Get configuration
+  const config = getObserveeConfig(observeeUrl, observeeApiKey, clientId);
+
+  // Create agent with minimal configuration for tool listing
+  const agentConfig: AgentConfig = {
+    provider: 'anthropic',
+    serverName: serverName,
+    serverUrl: config.url,
+    authToken: config.authToken || undefined,
+    syncTools: false,
+    enableFiltering: false
+  };
+
+  // Create and initialize agent
+  const agent = new MCPAgent(agentConfig);
+  
+  try {
+    await agent.initialize();
+    
+    // Get tools using the agent's MCP client
+    const mcpTools = await agent.getMcpClient().listTools();
+    
+    // Convert MCP tools to ToolInfo format
+    const tools: ToolInfo[] = mcpTools.map(tool => ({
+      name: tool.name,
+      description: tool.description || '',
+      input_schema: tool.inputSchema || {}
+    }));
+    
+    return tools;
+  } finally {
+    // Clean up
+    await agent.close();
+  }
+}
+
+/**
+ * Filter tools based on a query to find the most relevant ones
+ * 
+ * @param query - Search query to filter tools
+ * @param options - Configuration options
+ * @returns Array of filtered tools with relevance scores
+ * 
+ * @example
+ * ```typescript
+ * import { filterTools } from '@observee/agents';
+ * 
+ * const tools = await filterTools(
+ *   "search YouTube videos",
+ *   {
+ *     maxTools: 5,
+ *     observeeApiKey: "obs_your_key_here"
+ *   }
+ * );
+ * for (const tool of tools) {
+ *   console.log(`- ${tool.name} (score: ${tool.relevance_score})`);
+ * }
+ * ```
+ */
+export async function filterTools(
+  query: string,
+  options: {
+    maxTools?: number;
+    minScore?: number;
+    filterType?: string;
+    observeeUrl?: string;
+    observeeApiKey?: string;
+    clientId?: string;
+    serverName?: string;
+  } = {}
+): Promise<FilteredTool[]> {
+  const {
+    maxTools = 10,
+    minScore = 8.0,
+    filterType = 'bm25',
+    observeeUrl,
+    observeeApiKey,
+    clientId,
+    serverName = 'observee'
+  } = options;
+
+  // Get configuration
+  const config = getObserveeConfig(observeeUrl, observeeApiKey, clientId);
+
+  // Create agent with filtering enabled
+  const agentConfig: AgentConfig = {
+    provider: 'anthropic',
+    serverName: serverName,
+    serverUrl: config.url,
+    authToken: config.authToken || undefined,
+    syncTools: false,
+    filterType: filterType,
+    enableFiltering: true
+  };
+
+  // Create and initialize agent
+  const agent = new MCPAgent(agentConfig);
+  
+  try {
+    await agent.initialize();
+    
+    // Filter tools using the agent's tool filter
+    const toolFilter = agent.getToolFilter();
+    if (!toolFilter) {
+      throw new Error('Tool filter not available. This should not happen when filtering is enabled.');
+    }
+    const filteredTools = await toolFilter.filterTools(query, maxTools, minScore);
+    
+    // Convert to FilteredTool format with relevance scores
+    const tools: FilteredTool[] = filteredTools.map(tool => ({
+      name: tool.name,
+      description: tool.description || '',
+      input_schema: tool.parameters || {},
+      relevance_score: (tool as any).score || 0.0
+    }));
+    
+    return tools;
+  } finally {
+    // Clean up
+    await agent.close();
+  }
+}
+
+/**
+ * Execute a specific tool with given input parameters
+ * 
+ * @param toolName - Name of the tool to execute
+ * @param toolInput - Input parameters for the tool
+ * @param options - Configuration options
+ * @returns Tool execution result
+ * 
+ * @example
+ * ```typescript
+ * import { executeTool } from '@observee/agents';
+ * 
+ * const result = await executeTool(
+ *   "youtube_get_transcript",
+ *   { video_url: "https://youtube.com/watch?v=..." },
+ *   { observeeApiKey: "obs_your_key_here" }
+ * );
+ * console.log(result);
+ * ```
+ */
+export async function executeTool(
+  toolName: string,
+  toolInput: Record<string, any>,
+  options: {
+    observeeUrl?: string;
+    observeeApiKey?: string;
+    clientId?: string;
+    serverName?: string;
+  } = {}
+): Promise<any> {
+  const {
+    observeeUrl,
+    observeeApiKey,
+    clientId,
+    serverName = 'observee'
+  } = options;
+
+  // Get configuration
+  const config = getObserveeConfig(observeeUrl, observeeApiKey, clientId);
+
+  // Create agent with minimal configuration for tool execution
+  const agentConfig: AgentConfig = {
+    provider: 'anthropic',
+    serverName: serverName,
+    serverUrl: config.url,
+    authToken: config.authToken || undefined,
+    syncTools: false,
+    enableFiltering: false
+  };
+
+  // Create and initialize agent
+  const agent = new MCPAgent(agentConfig);
+  
+  try {
+    await agent.initialize();
+    
+    // Execute the tool using the agent's MCP client
+    const result = await agent.getMcpClient().callTool(toolName, toolInput);
+    
+    return result;
   } finally {
     // Clean up
     await agent.close();

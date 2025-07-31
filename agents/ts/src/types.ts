@@ -82,6 +82,18 @@ export interface LLMResponse {
   toolCalls?: any[];
 }
 
+// Tool listing and filtering types
+export interface ToolInfo {
+  name: string;
+  description: string;
+  input_schema?: Record<string, any>;
+  relevance_score?: number;
+}
+
+export interface FilteredTool extends ToolInfo {
+  relevance_score: number;
+}
+
 // Streaming types
 export interface StreamChunk {
   type: 'content' | 'tool_call' | 'metadata' | 'phase' | 'tool_result' | 'tool_error' | 'final_content' | 'done';

@@ -1,7 +1,7 @@
 {
   "name": "@observee/agents",
   "author": "Observee",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Observee SDK - A TypeScript SDK for MCP tool integration with LLM providers",
   "type": "module",
   "main": "./dist/index.js",
