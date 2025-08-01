@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/observee-ai-observee-badge.png)](https://mseep.ai/app/observee-ai-observee)
+
 <div align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="./public/images/observee_white.png">
