@@ -94,10 +94,18 @@ class ToolHandler:
         query: str,
         max_tools: int = 20,
         min_score: float = 8.0,
-        context: Optional[Dict[str, Any]] = None
+        context: Optional[Dict[str, Any]] = None,
+        expand_by_server: bool = False
     ) -> Tuple[List[Any], List[str]]:
         """
         Filter tools based on query
+        
+        Args:
+            query: The search query
+            max_tools: Maximum number of tools to return
+            min_score: Minimum score threshold
+            context: Optional context for filtering
+            expand_by_server: If True, include all tools from the same server when a tool is selected
         
         Returns:
             Tuple of (filtered_tools, tool_names)
@@ -113,11 +121,59 @@ class ToolHandler:
             context=context
         )
         
+        # If expand_by_server is enabled, include all tools from the same servers
+        if expand_by_server and filtered_tools:
+            
+            # Extract unique server names from filtered tools
+            servers_found = set()
+            original_tool_names = []
+            for tool in filtered_tools:
+                tool_name = tool.name if hasattr(tool, 'name') else str(tool)
+                original_tool_names.append(tool_name)
+                if '__' in tool_name:
+                    server = tool_name.split('__')[0]
+                    servers_found.add(server)
+            
+            
+            # If we found any servers, expand to include all tools from those servers
+            if servers_found:
+                expanded_tools = []
+                expanded_tool_names = set()
+                server_tool_count = {server: 0 for server in servers_found}
+                
+                # First add all originally filtered tools
+                for tool in filtered_tools:
+                    tool_name = tool.name if hasattr(tool, 'name') else str(tool)
+                    if tool_name not in expanded_tool_names:
+                        expanded_tools.append(tool)
+                        expanded_tool_names.add(tool_name)
+                
+                # Then add all other tools from the same servers
+                added_tools = []
+                for tool in self.all_tools:
+                    tool_name = tool.name if hasattr(tool, 'name') else str(tool)
+                    if tool_name not in expanded_tool_names:
+                        if '__' in tool_name:
+                            tool_server = tool_name.split('__')[0]
+                            if tool_server in servers_found:
+                                expanded_tools.append(tool)
+                                expanded_tool_names.add(tool_name)
+                                added_tools.append(tool_name)
+                                server_tool_count[tool_server] += 1
+                
+                for server, count in server_tool_count.items():
+                    logger.debug(f"   • {server}: +{count} tools")
+                
+                logger.debug(f"Expanded from {len(filtered_tools)} to {len(expanded_tools)} tools by including all tools from servers: {servers_found}")
+                filtered_tools = expanded_tools
+            
+        
         logger.debug(f"Filtered to {len(filtered_tools)} relevant tools for query: '{query}'")
         if filtered_tools:
             logger.debug(f"Top tools: {[t.name for t in filtered_tools[:5]]}")
         
         return filtered_tools, [t.name for t in filtered_tools]
+    
     
     def get_original_tools(self, filtered_tools: List[Any]) -> List[Any]:
         """Get original tool objects with full schemas for filtered tools"""

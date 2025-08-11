@@ -231,6 +231,7 @@ async def _chat_with_tools_async(
     sync_tools: bool = False,
     custom_tools: Optional[List[Dict[str, Any]]] = None,
     custom_tool_handler: Optional[callable] = None,
+    expand_by_server: bool = False,
     **provider_kwargs
 ) -> Dict[str, Any]:
     """
@@ -257,7 +258,8 @@ async def _chat_with_tools_async(
             max_tools=max_tools,
             min_score=min_score,
             custom_tools=custom_tools,
-            custom_tool_handler=custom_tool_handler
+            custom_tool_handler=custom_tool_handler,
+            expand_by_server=expand_by_server
         )
         
         return result
@@ -277,6 +279,7 @@ def chat_with_tools(
     sync_tools: bool = False,
     custom_tools: Optional[List[Dict[str, Any]]] = None,
     custom_tool_handler: Optional[callable] = None,
+    expand_by_server: bool = False,
     **provider_kwargs
 ) -> Dict[str, Any]:
     """
@@ -295,6 +298,7 @@ def chat_with_tools(
         filter_type: Tool filter type ("bm25", "local_embedding", "cloud")
         enable_filtering: Whether to enable tool filtering (default: True)
         sync_tools: Whether to clear caches and sync tools (default: False)
+        expand_by_server: If True, include all tools from same server when a tool is selected (default: False)
         **provider_kwargs: Additional arguments for the LLM provider
     
     Returns:
@@ -334,6 +338,7 @@ def chat_with_tools(
         sync_tools=sync_tools,
         custom_tools=custom_tools,
         custom_tool_handler=custom_tool_handler,
+        expand_by_server=expand_by_server,
         **provider_kwargs
     ))
 
@@ -354,6 +359,7 @@ async def _chat_with_tools_stream_async(
     system_prompt: Optional[str] = None,
     custom_tools: Optional[List[Dict[str, Any]]] = None,
     custom_tool_handler: Optional[callable] = None,
+    expand_by_server: bool = False,
     **provider_kwargs
 ):
     """
@@ -381,7 +387,8 @@ async def _chat_with_tools_stream_async(
         max_tools=max_tools,
         min_score=min_score,
         custom_tools=custom_tools,
-        custom_tool_handler=custom_tool_handler
+        custom_tool_handler=custom_tool_handler,
+        expand_by_server=expand_by_server
     ):
         # Add session_id to metadata chunks
         if chunk.get("type") == "done":
@@ -407,6 +414,7 @@ def chat_with_tools_stream(
     system_prompt: Optional[str] = None,
     custom_tools: Optional[List[Dict[str, Any]]] = None,
     custom_tool_handler: Optional[callable] = None,
+    expand_by_server: bool = False,
     **provider_kwargs
 ):
     """
@@ -429,6 +437,7 @@ def chat_with_tools_stream(
         sync_tools: Whether to clear caches and sync tools (default: False)
         session_id: Optional session ID for conversation history (auto-generated if not provided)
         system_prompt: Custom system prompt (uses default if not provided)
+        expand_by_server: If True, include all tools from same server when a tool is selected (default: False)
         **provider_kwargs: Additional arguments for the LLM provider
     
     Returns:
@@ -479,6 +488,7 @@ def chat_with_tools_stream(
         system_prompt=system_prompt,
         custom_tools=custom_tools,
         custom_tool_handler=custom_tool_handler,
+        expand_by_server=expand_by_server,
         **provider_kwargs
     )
 

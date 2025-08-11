@@ -6,3 +6,4 @@ pycache
 observee.egg-info
 __pycache__
 build.sh
+.DS_Store
