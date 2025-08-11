@@ -2,7 +2,6 @@
 Simplified MCP agent using modular components
 """
 
-import os
 from typing import List, Dict, Any, Optional, Union, AsyncIterator
 from fastmcp import Client
 from dotenv import load_dotenv
@@ -14,7 +13,6 @@ from .tool_handler import ToolHandler
 from .streaming import StreamingHandler
 from ..providers.base import LLMProvider
 from ..utils.tool_converter import clear_tool_cache
-from ..utils.langchain_converter import LangChainConverter
 
 logger = logging.getLogger(__name__)
 
@@ -166,15 +164,25 @@ class MCPAgent(BaseAgent):
         max_tools: int = 20,
         min_score: float = 8.0,
         context: Optional[Dict[str, Any]] = None,
-        custom_tools: Optional[List[Dict[str, Any]]] = None
+        custom_tools: Optional[List[Dict[str, Any]]] = None,
+        expand_by_server: bool = False
     ) -> Dict[str, Any]:
-        """Chat with the agent using filtered tools"""
+        """Chat with the agent using filtered tools
+        
+        Args:
+            message: User message
+            max_tools: Maximum number of tools to use
+            min_score: Minimum score for tool filtering
+            context: Optional context for filtering
+            custom_tools: Optional custom tools to add
+            expand_by_server: If True, include all tools from same server when a tool is selected
+        """
         # Add user message to history
         self.conversation.add_message("user", message)
         
         # Get appropriate tools
         tools_to_use, mcp_config = await self._prepare_tools_and_config(
-            message, max_tools, min_score, context, custom_tools
+            message, max_tools, min_score, context, custom_tools, expand_by_server
         )
         
         # Call provider
@@ -201,15 +209,24 @@ class MCPAgent(BaseAgent):
         message: str,
         max_tools: int = 20,
         min_score: float = 8.0,
-        custom_tools: Optional[List[Dict[str, Any]]] = None
+        custom_tools: Optional[List[Dict[str, Any]]] = None,
+        expand_by_server: bool = False
     ) -> AsyncIterator[Dict[str, Any]]:
-        """Stream chat response with filtered tools"""
+        """Stream chat response with filtered tools
+        
+        Args:
+            message: User message
+            max_tools: Maximum number of tools to use
+            min_score: Minimum score for tool filtering
+            custom_tools: Optional custom tools to add
+            expand_by_server: If True, include all tools from same server when a tool is selected
+        """
         # Add user message to history
         self.conversation.add_message("user", message)
         
         # Get appropriate tools
         tools_to_use, mcp_config = await self._prepare_tools_and_config(
-            message, max_tools, min_score, None, custom_tools
+            message, max_tools, min_score, None, custom_tools, expand_by_server
         )
         
         # Stream from provider
@@ -221,9 +238,7 @@ class MCPAgent(BaseAgent):
         async for chunk in self.provider.generate_stream(
             messages=messages,
             tools=tools_to_use,
-            mcp_config=mcp_config,
-            max_tokens=1000,
-            temperature=0.7
+            mcp_config=mcp_config
         ):
             if chunk["type"] == "content":
                 accumulated_content += chunk["content"]
@@ -251,15 +266,26 @@ class MCPAgent(BaseAgent):
         max_tools: int = 20,
         min_score: float = 8.0,
         custom_tools: Optional[List[Dict[str, Any]]] = None,
-        custom_tool_handler: Optional[callable] = None
+        custom_tool_handler: Optional[callable] = None,
+        expand_by_server: bool = False
     ) -> Dict[str, Any]:
-        """Complete chat flow with tool execution"""
+        """Complete chat flow with tool execution
+        
+        Args:
+            message: User message
+            max_tools: Maximum number of tools to use
+            min_score: Minimum score for tool filtering
+            custom_tools: Optional custom tools to add
+            custom_tool_handler: Optional handler for custom tools
+            expand_by_server: If True, include all tools from same server when a tool is selected
+        """
         # Get initial response
         initial_response = await self.chat(
             message, 
             max_tools=max_tools,
             min_score=min_score,
-            custom_tools=custom_tools
+            custom_tools=custom_tools,
+            expand_by_server=expand_by_server
         )
         
         # If no tool calls, return as is
@@ -314,9 +340,19 @@ class MCPAgent(BaseAgent):
         max_tools: int = 20,
         min_score: float = 8.0,
         custom_tools: Optional[List[Dict[str, Any]]] = None,
-        custom_tool_handler: Optional[callable] = None
+        custom_tool_handler: Optional[callable] = None,
+        expand_by_server: bool = False
     ) -> AsyncIterator[Dict[str, Any]]:
-        """Complete streaming chat flow with tool execution"""
+        """Complete streaming chat flow with tool execution
+        
+        Args:
+            message: User message
+            max_tools: Maximum number of tools to use
+            min_score: Minimum score for tool filtering
+            custom_tools: Optional custom tools to add
+            custom_tool_handler: Optional handler for custom tools
+            expand_by_server: If True, include all tools from same server when a tool is selected
+        """
         initial_tool_calls = []
         accumulated_content = ""
         metadata = {}
@@ -326,7 +362,8 @@ class MCPAgent(BaseAgent):
             message,
             max_tools=max_tools,
             min_score=min_score,
-            custom_tools=custom_tools
+            custom_tools=custom_tools,
+            expand_by_server=expand_by_server
         ):
             if chunk["type"] == "content":
                 accumulated_content += chunk["content"]
@@ -377,34 +414,82 @@ class MCPAgent(BaseAgent):
         tool_results_text = self.streaming.format_tool_results(tool_results)
         self.conversation.add_message("user", tool_results_text)
         
-        # Stream final response
-        final_content = ""
-        messages = self.conversation.get_messages_with_system()
+        # Stream final response - need to include tools so LLM can make additional calls if needed
+        # Keep executing tools in a loop until no more tool calls are made
+        all_tool_calls = initial_tool_calls.copy()
+        all_tool_results = tool_results.copy()
         
-        async for chunk in self.provider.generate_stream(
-            messages=messages,
-            mcp_config=self._get_mcp_config() if not self.enable_filtering else None,
-            max_tokens=1000
-        ):
-            if chunk["type"] == "content":
-                final_content += chunk["content"]
-                yield {
-                    "type": "final_content",
-                    "content": chunk["content"]
-                }
-            elif chunk["type"] == "done":
-                self.conversation.add_message("assistant", final_content)
+        max_rounds = 10  # Prevent infinite loops
+        for _ in range(max_rounds):
+            final_content = ""
+            additional_tool_calls = []
+            messages = self.conversation.get_messages_with_system()
+            
+            # Get the same tools configuration that was used initially
+            tools_to_use, mcp_config = await self._prepare_tools_and_config(
+                message, max_tools, min_score, None, custom_tools, expand_by_server
+            )
+            
+            async for chunk in self.provider.generate_stream(
+                messages=messages,
+                tools=tools_to_use,
+                mcp_config=mcp_config
+            ):
+                if chunk["type"] == "content":
+                    final_content += chunk["content"]
+                    yield {
+                        "type": "final_content",
+                        "content": chunk["content"]
+                    }
+                elif chunk["type"] == "tool_call":
+                    # LLM wants to make another tool call
+                    additional_tool_calls.append(chunk["tool_call"])
+                    yield chunk
+                elif chunk["type"] == "done":
+                    break
+            
+            # Add the response to conversation (only if there's content or tool calls)
+            # We need to track the assistant's message even if it only contains tool calls
+            if final_content or additional_tool_calls:
+                self.conversation.add_message("assistant", final_content if final_content else "[Tool calls executed]")
+            
+            # If no more tool calls, we're done
+            if not additional_tool_calls:
                 yield {
                     "type": "done",
                     "final_response": {
                         "content": final_content,
                         "initial_response": accumulated_content,
-                        "tool_calls": initial_tool_calls,
-                        "tool_results": tool_results,
+                        "tool_calls": all_tool_calls,
+                        "tool_results": all_tool_results,
                         **metadata
                     }
                 }
-                break
+                return  # Use return instead of break to ensure we exit the function
+            
+            # Execute the additional tools
+            all_tool_calls.extend(additional_tool_calls)
+            
+            async for result in self.streaming.handle_tool_execution_stream(
+                additional_tool_calls,
+                custom_tool_names,
+                custom_tool_handler
+            ):
+                yield result
+                if result["type"] == "tool_result":
+                    all_tool_results.append({
+                        'tool': result['tool_name'],
+                        'result': result['result']
+                    })
+                elif result["type"] == "tool_error":
+                    all_tool_results.append({
+                        'tool': result['tool_name'],
+                        'error': result['error']
+                    })
+            
+            # Format and add tool results to conversation
+            tool_results_text = self.streaming.format_tool_results(all_tool_results[-len(additional_tool_calls):])
+            self.conversation.add_message("user", tool_results_text)
     
     async def execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> Any:
         """Execute a tool call through MCP"""
@@ -424,25 +509,31 @@ class MCPAgent(BaseAgent):
         max_tools: int,
         min_score: float,
         context: Optional[Dict[str, Any]],
-        custom_tools: Optional[List[Dict[str, Any]]]
+        custom_tools: Optional[List[Dict[str, Any]]],
+        expand_by_server: bool = False
     ) -> tuple[Optional[List[Dict[str, Any]]], Optional[Dict[str, Any]]]:
-        """Prepare tools and MCP config based on filtering settings"""
+        """Prepare tools and MCP config based on filtering settings
+        
+        Args:
+            message: User message
+            max_tools: Maximum number of tools
+            min_score: Minimum score for filtering
+            context: Optional context
+            custom_tools: Optional custom tools
+            expand_by_server: If True, include all tools from same server
+        """
         if self.enable_filtering:
-            # Use filtering
+            # Use filtering with optional server expansion
             filtered_tools, _ = await self.tool_handler.filter_tools(
-                message, max_tools, min_score, context
+                message, max_tools, min_score, context, expand_by_server
             )
             
-            if self._should_use_langchain():
-                # Use LangChain for filtered tools
-                return await self._prepare_langchain_tools(filtered_tools, custom_tools)
-            else:
-                # Convert filtered tools
-                original_tools = self.tool_handler.get_original_tools(filtered_tools)
-                tools, _ = self.tool_handler.prepare_tools_for_provider(
-                    original_tools, custom_tools
-                )
-                return tools, None
+            # Convert filtered tools
+            original_tools = self.tool_handler.get_original_tools(filtered_tools)
+            tools, _ = self.tool_handler.prepare_tools_for_provider(
+                original_tools, custom_tools
+            )
+            return tools, None
         else:
             # No filtering - use native MCP or all tools
             if self._supports_native_mcp():
@@ -453,11 +544,6 @@ class MCPAgent(BaseAgent):
                 )
                 return tools, None
     
-    def _should_use_langchain(self) -> bool:
-        """Check if we should use LangChain for the current provider"""
-        # For now, always use direct provider calls
-        # This can be extended to use LangChain when needed
-        return False
     
     def _supports_native_mcp(self) -> bool:
         """Check if provider supports native MCP"""
@@ -489,19 +575,6 @@ class MCPAgent(BaseAgent):
         return await self.provider.generate(
             messages=messages,
             tools=tools,
-            mcp_config=mcp_config,
-            max_tokens=1000,
-            temperature=0.7
+            mcp_config=mcp_config
         )
     
-    async def _prepare_langchain_tools(
-        self,
-        filtered_tools: List[Any],
-        custom_tools: Optional[List[Dict[str, Any]]]
-    ) -> tuple[List[Dict[str, Any]], None]:
-        """Prepare tools for LangChain usage"""
-        # This would integrate with LangChain when needed
-        # For now, just convert tools normally
-        original_tools = self.tool_handler.get_original_tools(filtered_tools)
-        tools, _ = self.tool_handler.prepare_tools_for_provider(original_tools, custom_tools)
-        return tools, None

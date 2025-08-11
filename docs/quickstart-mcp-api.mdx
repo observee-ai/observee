@@ -1,0 +1,351 @@
+---
+title: "Quickstart - Direct MCP API Usage"
+sidebarTitle: "Direct MCP API Usage"
+description: "Use the Observee MCP API directly via HTTP"
+---
+
+This guide shows you how to use the Observee MCP API directly without any SDK.
+
+## Overview
+
+The Observee MCP API provides direct HTTP access to 1000+ tools via the Model Context Protocol. You can integrate it with any programming language or tool that supports HTTP requests.
+
+## Prerequisites
+
+1. **Observee API Key**: Get one at [app.observee.ai](https://app.observee.ai)
+2. **Client ID**: A UUID to identify your integration
+
+## API Endpoints
+
+### Authentication API (mcpauth)
+Base URL: `https://mcpauth.observee.ai`
+
+### MCP API (mcp.observee)
+Base URL: `https://mcp.observee.ai/mcp`
+
+## Step 1: Authentication with mcpauth
+
+### List Available OAuth Servers
+
+```bash
+curl -X POST https://mcpauth.observee.ai/supported_servers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "OBSERVEE_API_KEY": "obs_your_api_key_here"
+  }'
+```
+
+Response:
+```json
+{
+  "supported_servers": [
+    "gmail", "slack", "notion", "linear", "atlassian", 
+    "discord", "airtable", "gdrive", "gcal", "gdocs"
+  ]
+}
+```
+
+### Start OAuth Flow
+
+```bash
+# Generate a client ID (any UUID)
+CLIENT_ID="550e8400-e29b-41d4-a716-446655440000"
+
+# Start OAuth flow for Gmail
+curl -X POST "https://mcpauth.observee.ai/enterprise/gmail/start?client_id=${CLIENT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "OBSERVEE_API_KEY": "obs_your_api_key_here"
+  }'
+```
+
+Response:
+```json
+{
+  "url": "https://accounts.google.com/oauth/authorize?...",
+  "client_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+Visit the URL in your browser to complete authentication.
+
+### Check Authenticated Services
+
+```bash
+curl -X POST https://mcpauth.observee.ai/servers_by_client \
+  -H "Content-Type: application/json" \
+  -d '{
+    "OBSERVEE_API_KEY": "obs_your_api_key_here",
+    "client_id": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+```
+
+Response:
+```json
+{
+  "client_id": "550e8400-e29b-41d4-a716-446655440000",
+  "servers": ["gmail"],
+  "total_count": 1
+}
+```
+
+## Step 2: Using the MCP API
+
+The MCP API follows the JSON-RPC 2.0 protocol.
+
+### List Available Tools
+
+```bash
+curl -X POST "https://mcp.observee.ai/mcp?client_id=${CLIENT_ID}" \
+  -H "Authorization: Bearer obs_your_api_key_here" \
+  -H "Content-Type: application/mcp+json" \
+  -H "Accept: application/mcp+json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/list",
+    "id": 1
+  }'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "name": "gmail_search",
+        "description": "Search Gmail emails",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Gmail search query"
+            }
+          },
+          "required": ["query"]
+        }
+      },
+      {
+        "name": "gmail_send_email",
+        "description": "Send an email via Gmail",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "to": {"type": "string"},
+            "subject": {"type": "string"},
+            "body": {"type": "string"}
+          },
+          "required": ["to", "subject", "body"]
+        }
+      }
+    ]
+  },
+  "id": 1
+}
+```
+
+### Call a Tool
+
+```bash
+# Search emails
+curl -X POST "https://mcp.observee.ai/mcp?client_id=${CLIENT_ID}" \
+  -H "Authorization: Bearer obs_your_api_key_here" \
+  -H "Content-Type: application/mcp+json" \
+  -H "Accept: application/mcp+json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "name": "gmail_search",
+      "arguments": {
+        "query": "is:unread from:important@example.com"
+      }
+    },
+    "id": 2
+  }'
+```
+
+Response:
+```json
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Found 3 emails matching your search..."
+      }
+    ]
+  },
+  "id": 2
+}
+```
+
+### Send an Email
+
+```bash
+curl -X POST "https://mcp.observee.ai/mcp?client_id=${CLIENT_ID}" \
+  -H "Authorization: Bearer obs_your_api_key_here" \
+  -H "Content-Type: application/mcp+json" \
+  -H "Accept: application/mcp+json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "name": "gmail_send_email",
+      "arguments": {
+        "to": "recipient@example.com",
+        "subject": "Hello from MCP API",
+        "body": "This email was sent using the direct MCP API!"
+      }
+    },
+    "id": 3
+  }'
+```
+
+## Authentication Options
+
+### Client ID Methods
+
+1. **URL Parameter** (recommended):
+   ```
+   https://mcp.observee.ai/mcp?client_id=YOUR_CLIENT_ID
+   ```
+
+2. **HTTP Header**:
+   ```
+   X-CLIENT-ID: YOUR_CLIENT_ID
+   ```
+
+### Custom OAuth Redirect
+
+```bash
+curl -X POST "https://mcpauth.observee.ai/enterprise/gmail/start?client_id=${CLIENT_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "OBSERVEE_API_KEY": "obs_your_api_key_here",
+    "CUSTOM_REDIRECT_URL": "https://your-app.com/oauth/callback"
+  }'
+```
+
+## Complete Workflow Example
+
+Here's a complete workflow to authenticate and use Gmail:
+
+```bash
+#!/bin/bash
+
+# Configuration
+API_KEY="obs_your_api_key_here"
+CLIENT_ID=$(uuidgen)  # Generate new UUID or use existing
+
+# Step 1: Start Gmail authentication
+echo "Starting Gmail authentication..."
+AUTH_RESPONSE=$(curl -s -X POST "https://mcpauth.observee.ai/enterprise/gmail/start?client_id=${CLIENT_ID}" \
+  -H "Content-Type: application/json" \
+  -d "{\"OBSERVEE_API_KEY\": \"${API_KEY}\"}")
+
+AUTH_URL=$(echo $AUTH_RESPONSE | jq -r '.url')
+echo "Please visit: $AUTH_URL"
+echo "Press Enter after completing authentication..."
+read
+
+# Step 2: List available tools
+echo "Listing available tools..."
+curl -X POST "https://mcp.observee.ai/mcp?client_id=${CLIENT_ID}" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/mcp+json" \
+  -H "Accept: application/mcp+json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/list",
+    "id": 1
+  }' | jq '.result.tools[] | {name, description}'
+
+# Step 3: Search emails
+echo "Searching unread emails..."
+curl -X POST "https://mcp.observee.ai/mcp?client_id=${CLIENT_ID}" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/mcp+json" \
+  -H "Accept: application/mcp+json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "name": "gmail_search",
+      "arguments": {
+        "query": "is:unread"
+      }
+    },
+    "id": 2
+  }' | jq '.result.content[0].text'
+```
+
+## Available Services and Tools
+
+### Gmail
+- `gmail_search` - Search emails
+- `gmail_send_email` - Send emails
+- `gmail_get_thread` - Get email threads
+- `gmail_modify_labels` - Manage labels
+
+### Slack
+- `slack_send_message` - Send messages
+- `slack_list_channels` - List channels
+- `slack_get_channel_history` - Get messages
+
+### Notion
+- `notion_search` - Search pages
+- `notion_create_page` - Create pages
+- `notion_get_page` - Get page content
+
+### Linear
+- `linear_create_issue` - Create issues
+- `linear_list_projects` - List projects
+- `linear_search_issues` - Search issues
+
+Use the `tools/list` method to discover all available tools after authentication.
+
+## Error Handling
+
+### Authentication Errors
+```json
+{
+  "error": "Invalid API key",
+  "_status_code": 401
+}
+```
+
+### MCP API Errors
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32602,
+    "message": "Invalid params",
+    "data": "Tool not found: unknown_tool"
+  },
+  "id": 1
+}
+```
+
+## Rate Limits
+
+- Authentication API: 100 requests per minute
+- MCP API: 1000 requests per minute
+- Implement exponential backoff for 429 responses
+
+## Best Practices
+
+1. **Store Client IDs**: Save and reuse client IDs across sessions
+2. **Handle Errors**: Check status codes and error messages
+3. **Use HTTPS**: Always use secure connections
+4. **Secure API Keys**: Never expose API keys in client-side code
+
+## Next Steps
+
+- Explore available tools with `tools/list`
+- Authenticate additional services with the same client ID
+- Build integrations in your preferred programming language
